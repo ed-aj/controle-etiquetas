@@ -1419,6 +1419,64 @@ async function boot(){
 
 initLogin();
 </script>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
+  import { 
+    getAuth, 
+    createUserWithEmailAndPassword, 
+    signInWithEmailAndPassword,
+    onAuthStateChanged
+  } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
 
+  const firebaseConfig = {
+    apiKey: "AIzaSyCTJyf-S1SFIQIG5l6y_EV06-dqnc6SxsQ",
+    authDomain: "controle-de-etiquetas-d8385.firebaseapp.com",
+    projectId: "controle-de-etiquetas-d8385",
+    storageBucket: "controle-de-etiquetas-d8385.firebasestorage.app",
+    messagingSenderId: "269761879207",
+    appId: "1:269761879207:web:653a30302ddef6c27dcf82"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+
+  // 🔹 CADASTRO
+  window.cadastro = function () {
+    const email = document.getElementById("email").value;
+    const senha = document.getElementById("senha").value;
+
+    createUserWithEmailAndPassword(auth, email, senha)
+      .then(() => {
+        document.getElementById("status").innerText = "Conta criada com sucesso!";
+      })
+      .catch((error) => {
+        document.getElementById("status").innerText = error.message;
+      });
+  }
+
+  // 🔹 LOGIN
+  window.login = function () {
+    const email = document.getElementById("email").value;
+    const senha = document.getElementById("senha").value;
+
+    signInWithEmailAndPassword(auth, email, senha)
+      .then(() => {
+        document.getElementById("status").innerText = "Login OK!";
+
+        // 🔥 redireciona para sua página principal
+        window.location.href = "mainp.html";
+      })
+      .catch((error) => {
+        document.getElementById("status").innerText = error.message;
+      });
+  }
+
+  // 🔥 EXTRA: se já estiver logado, pula login automaticamente
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      window.location.href = "mainp.html";
+    }
+  });
+</script>
 </body>
 </html>

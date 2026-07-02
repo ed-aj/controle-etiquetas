@@ -101,52 +101,64 @@
   </div>
 
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
-    import { 
-      getAuth, 
-      createUserWithEmailAndPassword, 
-      signInWithEmailAndPassword 
-    } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
+  import { 
+    getAuth, 
+    createUserWithEmailAndPassword, 
+    signInWithEmailAndPassword,
+    onAuthStateChanged
+  } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyCTJyf-S1SFIQIG5l6y_EV06-dqnc6SxsQ",
-      authDomain: "controle-de-etiquetas-d8385.firebaseapp.com",
-      projectId: "controle-de-etiquetas-d8385",
-      storageBucket: "controle-de-etiquetas-d8385.firebasestorage.app",
-      messagingSenderId: "269761879207",
-      appId: "1:269761879207:web:653a30302ddef6c27dcf82"
-    };
+  const firebaseConfig = {
+    apiKey: "AIzaSyCTJyf-S1SFIQIG5l6y_EV06-dqnc6SxsQ",
+    authDomain: "controle-de-etiquetas-d8385.firebaseapp.com",
+    projectId: "controle-de-etiquetas-d8385",
+    storageBucket: "controle-de-etiquetas-d8385.firebasestorage.app",
+    messagingSenderId: "269761879207",
+    appId: "1:269761879207:web:653a30302ddef6c27dcf82"
+  };
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
 
-    window.cadastro = function () {
-      const email = document.getElementById("email").value;
-      const senha = document.getElementById("senha").value;
+  // 🔥 CADASTRO
+  window.cadastro = function () {
+    const email = document.getElementById("email").value;
+    const senha = document.getElementById("senha").value;
 
-      createUserWithEmailAndPassword(auth, email, senha)
-        .then(() => {
-          document.getElementById("status").innerText = "Conta criada com sucesso!";
-        })
-        .catch((error) => {
-          document.getElementById("status").innerText = error.message;
-        });
+    createUserWithEmailAndPassword(auth, email, senha)
+      .then(() => {
+        document.getElementById("status").innerText = "Conta criada com sucesso!";
+      })
+      .catch((error) => {
+        document.getElementById("status").innerText = error.message;
+      });
+  }
+
+  // 🔥 LOGIN (COM REDIRECIONAMENTO CORRETO)
+  window.login = function () {
+    const email = document.getElementById("email").value;
+    const senha = document.getElementById("senha").value;
+
+    signInWithEmailAndPassword(auth, email, senha)
+      .then(() => {
+        document.getElementById("status").innerText = "Login OK!";
+
+        // 🔥 IMPORTANTE: vai para sua página real
+        window.location.href = "mainp.html";
+      })
+      .catch((error) => {
+        document.getElementById("status").innerText = error.message;
+      });
+  }
+
+  // 🔥 EXTRA (opcional, mas profissional)
+  // Se o usuário já estiver logado, pula login automaticamente
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      window.location.href = "mainp.html";
     }
-
-    window.login = function () {
-      const email = document.getElementById("email").value;
-      const senha = document.getElementById("senha").value;
-
-      signInWithEmailAndPassword(auth, email, senha)
-        .then(() => {
-          document.getElementById("status").innerText = "Login OK!";
-          window.location.href = "index.html";
-        })
-        .catch((error) => {
-          document.getElementById("status").innerText = error.message;
-        });
-    }
-  </script>
-
+  });
+</script>
 </body>
 </html>

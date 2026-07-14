@@ -234,22 +234,31 @@ tbody tr:last-child td{border-bottom:none;}
 </head>
 <body>
 <div id="app-shell">
-  <div class="topbar">
-    <div class="brand">
-      <div class="brand-mark">ETQ</div>
-      <div class="brand-text">
-        <h1>Controle de Etiquetas &amp; Lotes</h1>
-        <p>Base de dados, drill-down de etiquetas e pedidos</p>
-      </div>
-    </div>
-    <div class="topbar-right">
-      <div class="record-counter">Registros: <b id="record-count">0</b>/999</div>
-      <button class="btn-danger-ghost" id="btn-excluir-tudo">Excluir tudo</button>
+ <div class="topbar">
+  <div class="brand">
+    <div class="brand-mark">ETQ</div>
+    <div class="brand-text">
+      <h1>Controle de Etiquetas &amp; Lotes</h1>
+      <p>Base de dados, drill-down de etiquetas e pedidos</p>
     </div>
   </div>
 
-  <div class="tabs">
-    <button class="tab-btn" data-tab="db">Base de Dados</button>
+  <div class="topbar-right">
+    <div class="record-counter">
+      Registros: <b id="record-count">0</b>/999
+    </div>
+
+    <button class="btn-danger-ghost" onclick="logout()">
+      Sair
+    </button>
+
+    <button class="btn-danger-ghost" id="btn-excluir-tudo">
+      Excluir tudo
+    </button>
+  </div>
+</div>
+
+<div class="tabs">    <button class="tab-btn" data-tab="db">Base de Dados</button>
     <button class="tab-btn" data-tab="etiquetas">Etiquetas</button>
     <button class="tab-btn" data-tab="pedidos">Pedidos</button>
   </div>
@@ -1512,5 +1521,59 @@ async function boot(){
 
 boot();
 </script>
+  <script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
+import {
+  getAuth,
+  onAuthStateChanged,
+  signOut
+} from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCTJyf-S1SFIQIG5l6y_EV06-dqnc6SxsQ",
+  authDomain: "controle-de-etiquetas-d8385.firebaseapp.com",
+  projectId: "controle-de-etiquetas-d8385",
+  storageBucket: "controle-de-etiquetas-d8385.firebasestorage.app",
+  messagingSenderId: "269761879207",
+  appId: "1:269761879207:web:653a30302ddef6c27dcf82"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+
+// ===============================
+// PROTEÇÃO DA PÁGINA
+// ===============================
+onAuthStateChanged(auth, (user) => {
+
+  if (!user) {
+    window.location.replace("index.html");
+    return;
+  }
+
+  console.log("Usuário autenticado:", user.email);
+
+});
+
+// ===============================
+// LOGOUT
+// ===============================
+window.logout = function(){
+
+  signOut(auth)
+    .then(() => {
+
+      window.location.replace("index.html");
+
+    })
+    .catch((error)=>{
+
+      console.error(error);
+
+    });
+
+}
+
+  </script>
   </body>
 </html>

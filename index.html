@@ -1,65 +1,205 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - Controle de Etiquetas</title>
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      background: linear-gradient(135deg, #0f172a, #1e293b);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .card {
+      width: 360px;
+      background: rgba(255,255,255,0.08);
+      backdrop-filter: blur(12px);
+      border-radius: 16px;
+      padding: 35px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.4);
+    }
+
+    h2{
+      color:white;
+      text-align:center;
+      margin-bottom:25px;
+    }
+
+    input{
+      width:100%;
+      padding:12px;
+      margin-bottom:15px;
+      border:none;
+      border-radius:8px;
+      font-size:15px;
+    }
+
+    button{
+      width:100%;
+      padding:12px;
+      border:none;
+      border-radius:8px;
+      cursor:pointer;
+      font-size:15px;
+      margin-top:10px;
+    }
+
+    .login{
+      background:#2563eb;
+      color:white;
+    }
+
+    .login:hover{
+      background:#1d4ed8;
+    }
+
+    .cadastro{
+      background:transparent;
+      border:1px solid white;
+      color:white;
+    }
+
+    #status{
+      margin-top:15px;
+      color:white;
+      text-align:center;
+      font-size:14px;
+      min-height:20px;
+    }
+  </style>
+
+</head>
+
+<body>
+
+<div class="card">
+
+<h2>Controle de Etiquetas</h2>
+
+<input
+id="email"
+type="email"
+placeholder="E-mail">
+
+<input
+id="senha"
+type="password"
+placeholder="Senha">
+
+<button class="login" onclick="login()">
+Entrar
+</button>
+
+<button class="cadastro" onclick="cadastro()">
+Cadastrar
+</button>
+
+<p id="status"></p>
+
+</div>
+
+
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
-  import {
-    getAuth,
-    createUserWithEmailAndPassword,
-    signInWithEmailAndPassword
-  } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyCTJyf-S1SFIQIG5l6y_EV06-dqnc6SxsQ",
-    authDomain: "controle-de-etiquetas-d8385.firebaseapp.com",
-    projectId: "controle-de-etiquetas-d8385",
-    storageBucket: "controle-de-etiquetas-d8385.firebasestorage.app",
-    messagingSenderId: "269761879207",
-    appId: "1:269761879207:web:653a30302ddef6c27dcf82"
-  };
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
 
-  // Inicializa o Firebase
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
+import {
+getAuth,
+createUserWithEmailAndPassword,
+signInWithEmailAndPassword
+} from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
 
-  // ==========================
-  // CADASTRO
-  // ==========================
-  window.cadastro = function () {
 
-    const email = document.getElementById("email").value;
-    const senha = document.getElementById("senha").value;
+const firebaseConfig = {
 
-    createUserWithEmailAndPassword(auth, email, senha)
-      .then(() => {
-        document.getElementById("status").innerText = "Conta criada com sucesso!";
-      })
-      .catch((error) => {
-        document.getElementById("status").innerText = error.message;
-      });
+apiKey: "AIzaSyCTJyf-S1SFIQIG5l6y_EV06-dqnc6SxsQ",
 
-  };
+authDomain: "controle-de-etiquetas-d8385.firebaseapp.com",
 
-  // ==========================
-  // LOGIN
-  // ==========================
-  window.login = function () {
+projectId: "controle-de-etiquetas-d8385",
 
-    const email = document.getElementById("email").value;
-    const senha = document.getElementById("senha").value;
+storageBucket: "controle-de-etiquetas-d8385.firebasestorage.app",
 
-    signInWithEmailAndPassword(auth, email, senha)
-      .then(() => {
+messagingSenderId: "269761879207",
 
-        document.getElementById("status").innerText = "Login realizado com sucesso!";
+appId: "1:269761879207:web:653a30302ddef6c27dcf82"
 
-        // Aguarda um instante antes de trocar de página
-        setTimeout(() => {
-          window.location.href = "mainp.html";
-        }, 300);
+};
 
-      })
-      .catch((error) => {
-        document.getElementById("status").innerText = error.message;
-      });
 
-  };
+const app = initializeApp(firebaseConfig);
+
+const auth = getAuth(app);
+
+
+// CADASTRO
+
+window.cadastro = function(){
+
+const email=document.getElementById("email").value;
+
+const senha=document.getElementById("senha").value;
+
+createUserWithEmailAndPassword(auth,email,senha)
+
+.then(()=>{
+
+document.getElementById("status").innerHTML="Conta criada com sucesso!";
+
+})
+
+.catch((erro)=>{
+
+document.getElementById("status").innerHTML=erro.message;
+
+});
+
+}
+
+
+// LOGIN
+
+window.login = function(){
+
+const email=document.getElementById("email").value;
+
+const senha=document.getElementById("senha").value;
+
+signInWithEmailAndPassword(auth,email,senha)
+
+.then(()=>{
+
+document.getElementById("status").innerHTML="Login realizado!";
+
+setTimeout(function(){
+
+window.location.href="mainp.html";
+
+},500);
+
+})
+
+.catch((erro)=>{
+
+document.getElementById("status").innerHTML=erro.message;
+
+});
+
+}
 
 </script>
+
+</body>
+</html>

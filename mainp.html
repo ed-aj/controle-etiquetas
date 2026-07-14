@@ -1242,6 +1242,64 @@ function confirmModal(message){
 }
 
 /* =========================================================================
+   URL <-> ESTADO DE NAVEGAÇÃO
+   Cada aba/drill-down/pedido aberto vira um endereço diferente depois do
+   "#" (não precisa de configuração nenhuma no GitHub Pages, pois é só
+   fragmento de URL, não uma rota de servidor). Isso permite:
+   - favoritar/compartilhar o link de um produto, país ou pedido específico
+   - usar o botão Voltar/Avançar do navegador para navegar pelo histórico
+   ========================================================================= */
+function buildHashParams(){
+  const params = new URLSearchParams();
+  params.set('tab', activeTab);
+  if(activeTab==='etiquetas'){
+    params.set('level', String(etiquetaNav.level));
+    if(etiquetaNav.productKey) params.set('product', etiquetaNav.productKey);
+    if(etiquetaNav.pais) params.set('pais', etiquetaNav.pais);
+    if(etiquetaNav.distribuidor) params.set('dist', etiquetaNav.distribuidor);
+  }
+  if(activeTab==='pedidos' && pedidosView.mode==='detail' && pedidosView.pedidoId){
+    params.set('pedido', pedidosView.pedidoId);
+  }
+  return params;
+}
+
+function syncUrlFromState(){
+  const newHash = '#' + buildHashParams().toString();
+  if(location.hash !== newHash){
+    history.pushState(null, '', newHash);
+  }
+}
+
+function applyStateFromUrl(){
+  const params = new URLSearchParams(location.hash.replace(/^#/, ''));
+  const tab = params.get('tab');
+  if(tab && ['db','etiquetas','pedidos'].includes(tab)) activeTab = tab;
+  if(activeTab==='etiquetas'){
+    const level = parseInt(params.get('level')||'1', 10);
+    etiquetaNav = {
+      level: (level>=1 && level<=4) ? level : 1,
+      productKey: params.get('product') || null,
+      pais: params.get('pais') || null,
+      distribuidor: params.get('dist') || null
+    };
+  } else {
+    etiquetaNav = {level:1, productKey:null, pais:null, distribuidor:null};
+  }
+  if(activeTab==='pedidos'){
+    const pedidoId = params.get('pedido');
+    pedidosView = pedidoId ? {mode:'detail', pedidoId} : {mode:'list', pedidoId:null};
+  } else {
+    pedidosView = {mode:'list', pedidoId:null};
+  }
+}
+
+window.addEventListener('popstate', ()=>{
+  applyStateFromUrl();
+  render();
+});
+
+/* =========================================================================
    RENDER PRINCIPAL + EVENTOS
    ========================================================================= */
 function render(){
@@ -1252,6 +1310,7 @@ function render(){
   else if(activeTab==='etiquetas') content.innerHTML = renderEtiquetasTab();
   else if(activeTab==='pedidos') content.innerHTML = renderPedidosTab();
   bindTabEvents();
+  syncUrlFromState();
 }
 
 async function runSync(showToast){
@@ -1390,6 +1449,7 @@ $('#btn-excluir-tudo').onclick = async ()=>{
 async function boot(){
   await loadAll();
   await runSync(false);
+  applyStateFromUrl();
   render();
 }
 </script>

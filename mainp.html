@@ -43,15 +43,13 @@ body{
   min-height:100vh;
   min-width:1240px; /* desktop only */
 }
+body.auth-pending #app-shell{display:none;}
 ::selection{background:var(--accent-soft);}
 h1,h2,h3,h4{font-family:'Inter',sans-serif; font-weight:600; letter-spacing:0; margin:0; color:var(--ink);}
 .mono{font-family:'IBM Plex Mono',monospace;}
 button{font-family:'Inter',sans-serif; cursor:pointer;}
 input,select,textarea{font-family:'Inter',sans-serif; font-size:13.5px;}
-
-/* ---------- App shell ---------- */
 #app-shell{max-width:1180px; min-width:1180px; margin:0 auto; padding:20px 20px 60px;}
-
 .topbar{
   display:flex; align-items:center; justify-content:space-between; gap:16px;
   background:var(--surface); color:var(--ink); border:1px solid var(--border);
@@ -77,7 +75,6 @@ input,select,textarea{font-family:'Inter',sans-serif; font-size:13.5px;}
   letter-spacing:0;
 }
 .btn-danger-ghost:hover{background:var(--warn-soft);}
-
 .tabs{display:flex; gap:4px; margin-bottom:20px; border-bottom:1px solid var(--border);}
 .tab-btn{
   background:transparent; border:none; padding:10px 16px 12px;
@@ -87,14 +84,11 @@ input,select,textarea{font-family:'Inter',sans-serif; font-size:13.5px;}
 }
 .tab-btn.active{color:var(--accent); border-bottom-color:var(--accent);}
 .tab-btn:hover:not(.active){color:var(--ink);}
-
 .panel{
   background:var(--surface); border:1px solid var(--border);
   border-radius:var(--radius-lg); box-shadow:var(--shadow); padding:24px;
 }
 .panel + .panel{margin-top:16px;}
-
-/* ---------- Buttons ---------- */
 .btn{
   background:var(--accent); color:#fff; border:none;
   padding:10px 18px; border-radius:var(--radius); font-weight:600; font-size:13.5px;
@@ -107,21 +101,15 @@ input,select,textarea{font-family:'Inter',sans-serif; font-size:13.5px;}
 .btn.warn{background:var(--warn); color:#fff;}
 .btn.warn:hover{background:#c1202f;}
 .btn:disabled{opacity:.45; cursor:not-allowed;}
-
-/* ---------- Breadcrumb ---------- */
 .crumbs{display:flex; align-items:center; flex-wrap:wrap; gap:6px; margin-bottom:20px; font-family:'Inter',sans-serif; font-size:13px; font-weight:500;}
 .crumb{background:var(--surface-alt); border:1px solid var(--border); padding:6px 13px; border-radius:var(--radius); color:var(--ink-soft);}
 .crumb.active{background:var(--accent-soft); color:var(--accent); border-color:var(--accent);}
 .crumb-btn{background:none; border:none; font:inherit; padding:0; color:inherit;}
 .crumb-sep{color:var(--ink-faint);}
-
-/* ---------- Card grids ---------- */
 .crumbs-row{display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:20px;}
 .crumbs-row .crumbs{margin-bottom:0;}
-
 .filters-bar{background:var(--surface-alt); border:1px solid var(--border); border-radius:var(--radius-lg); padding:16px 18px; margin-bottom:18px;}
 .filters-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:12px;}
-
 .grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:12px;}
 .pick-card{
   background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg);
@@ -135,15 +123,12 @@ input,select,textarea{font-family:'Inter',sans-serif; font-size:13.5px;}
 .tag{font-family:'IBM Plex Mono'; font-size:10.5px; background:var(--surface-alt); border:1px solid var(--border); padding:3px 8px; border-radius:6px; color:var(--ink-soft);}
 .tag.blue{background:var(--blue-soft); color:var(--blue); border-color:#c9d3f5;}
 .tag.accent{background:var(--accent-soft); color:var(--accent); border-color:#c9d3f5;}
-
 .empty-state{
   border:1px dashed var(--border-strong); border-radius:var(--radius-lg);
   padding:36px 20px; text-align:center; color:var(--ink-soft);
 }
 .empty-state h3{font-size:15px; color:var(--ink); margin-bottom:6px;}
 .empty-state p{margin:0 0 14px; font-size:13px;}
-
-/* ---------- Lote stamp (signature element) ---------- */
 .stamp{
   display:inline-flex; align-items:center; gap:9px;
   border:none; color:var(--gold);
@@ -152,8 +137,6 @@ input,select,textarea{font-family:'Inter',sans-serif; font-size:13.5px;}
   background:var(--gold-soft);
 }
 .stamp small{font-family:'Inter'; font-weight:600; text-transform:uppercase; font-size:9.5px; letter-spacing:.06em; opacity:.85; color:var(--ink-soft);}
-
-/* ---------- Etiqueta final card ---------- */
 .etiqueta-final{
   background:var(--surface-alt); border:1px solid var(--border);
   border-radius:var(--radius-lg); padding:20px 22px; margin-bottom:14px;
@@ -167,14 +150,11 @@ input,select,textarea{font-family:'Inter',sans-serif; font-size:13.5px;}
 .ef-row{display:flex; flex-wrap:wrap; gap:20px; font-size:12.5px; color:var(--ink-soft); margin-top:10px;}
 .ef-row div b{display:block; font-family:'IBM Plex Mono'; font-size:10px; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-faint); margin-bottom:3px; font-weight:600;}
 .ef-obs{margin-top:10px; font-size:12.5px; color:var(--ink-soft); font-style:italic;}
-
 .mini-table{border-collapse:collapse; margin-top:10px; font-size:12.5px;}
 .mini-table td{padding:4px 14px 4px 0; vertical-align:top;}
 .mini-table td:first-child{color:var(--ink-faint); font-size:11px; text-transform:uppercase; letter-spacing:.04em; font-weight:600; white-space:nowrap; width:1%;}
 .mini-table td:last-child{color:var(--ink); font-weight:500;}
 .ef-actions{display:flex; gap:8px; margin-top:14px;}
-
-/* ---------- Forms ---------- */
 .field{margin-bottom:16px;}
 .field label{display:block; font-family:'Inter',sans-serif; font-size:12.5px; font-weight:600; letter-spacing:0; color:var(--ink-soft); margin-bottom:6px;}
 .field input,.field select,.field textarea{
@@ -184,8 +164,6 @@ input,select,textarea{font-family:'Inter',sans-serif; font-size:13.5px;}
 .field input:focus,.field select:focus,.field textarea:focus{outline:2px solid var(--accent); outline-offset:1px; border-color:var(--accent);}
 .field-hint{font-size:11.5px; color:var(--ink-faint); margin-top:5px;}
 .field-row{display:grid; grid-template-columns:1fr 1fr; gap:14px;}
-
-/* ---------- Table ---------- */
 .table-wrap{overflow-x:auto; border:1px solid var(--border); border-radius:var(--radius-lg);}
 table{border-collapse:collapse; width:100%; font-size:12.5px;}
 thead th{
@@ -197,14 +175,10 @@ tbody td{padding:9px 12px; border-bottom:1px solid var(--border); white-space:no
 tbody tr:hover{background:var(--surface-alt);}
 tbody tr:last-child td{border-bottom:none;}
 .sku-cell{font-family:'IBM Plex Mono'; font-weight:600;}
-
-/* ---------- Toolbar ---------- */
 .toolbar{display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:16px;}
 .toolbar-left{display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
 .search-input{padding:10px 13px; border:1px solid var(--border-strong); border-radius:var(--radius); min-width:220px; background:var(--field-bg); color:var(--input-text);}
 .count-pill{font-family:'IBM Plex Mono'; font-size:11px; color:var(--ink-soft); background:var(--surface-alt); padding:5px 11px; border-radius:12px; border:1px solid var(--border);}
-
-/* ---------- Modal ---------- */
 .modal-backdrop{position:fixed; inset:0; background:rgba(28,33,48,0.45); display:flex; align-items:flex-start; justify-content:center; padding:5vh 16px; z-index:100; overflow-y:auto;}
 .modal{background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); width:100%; max-width:520px; box-shadow:0 20px 50px rgba(20,24,40,.2); animation:modalIn .15s ease-out;}
 @keyframes modalIn{from{opacity:0; transform:translateY(-8px);} to{opacity:1; transform:translateY(0);}}
@@ -214,28 +188,98 @@ tbody tr:last-child td{border-bottom:none;}
 .modal-close:hover{color:var(--ink);}
 .modal-body{padding:22px; max-height:70vh; overflow-y:auto;}
 .modal-foot{display:flex; justify-content:flex-end; gap:8px; padding:16px 22px; border-top:1px solid var(--border);}
-
-/* ---------- SKU chips (pedido) ---------- */
 .chip-list{display:flex; flex-wrap:wrap; gap:6px; margin-top:10px;}
 .chip{font-family:'IBM Plex Mono'; font-size:11.5px; padding:5px 10px; border-radius:6px; border:1px solid var(--border);}
 .chip.ok{background:var(--accent-soft); color:var(--accent); border-color:#c9d3f5;}
 .chip.bad{background:var(--warn-soft); color:#c1202f; border-color:#f0c4c9;}
-
 .section-title{display:flex; align-items:center; gap:12px; margin-bottom:16px;}
 .section-title h2{font-size:17px;}
 .section-title .rule{flex:1; height:1px; background:var(--border);}
-
 .toast{position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:var(--deep); color:#fff; padding:11px 20px; border-radius:var(--radius); font-size:13px; box-shadow:var(--shadow); z-index:200; max-width:520px; text-align:center;}
-
 .pedido-card{border:1px solid var(--border); border-radius:var(--radius-lg); padding:16px 18px; margin-bottom:10px; cursor:pointer; background:var(--surface);}
 .pedido-card:hover{border-color:var(--accent);}
 .pedido-card .pc-head{display:flex; justify-content:space-between; align-items:center; font-family:'Inter',sans-serif; font-weight:600; font-size:14px; letter-spacing:0;}
 .pedido-card .pc-sub{font-size:12.5px; color:var(--ink-soft); margin-top:5px;}
-
 .helper-text{font-size:12.5px; color:var(--ink-soft); margin-bottom:16px; line-height:1.55;}
 </style>
+<script type="module">
+/* =========================================================================
+   GATE DE AUTENTICAÇÃO + BACKEND (FIRESTORE)
+   Este bloco roda antes de qualquer outro script. Enquanto o Firebase não
+   confirmar um usuário logado, o <body> fica com a classe "auth-pending"
+   (oculta #app-shell via CSS) e nenhum dado é buscado.
+
+   Depois de confirmado o login:
+     1) remove a classe "auth-pending"
+     2) expõe window.fsGet / window.fsSet — funções que leem e gravam no
+        Firestore (coleção "appData"), protegidas pelas regras de
+        segurança do projeto (só usuário autenticado pode ler/escrever)
+     3) dispara "app:authenticated", liberando o boot() do app principal
+   ========================================================================= */
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
+import {
+  getAuth,
+  onAuthStateChanged,
+  signOut
+} from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
+import {
+  getFirestore,
+  doc,
+  getDoc,
+  setDoc
+} from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCTJyf-S1SFIQIG5l6y_EV06-dqnc6SxsQ",
+  authDomain: "controle-de-etiquetas-d8385.firebaseapp.com",
+  projectId: "controle-de-etiquetas-d8385",
+  storageBucket: "controle-de-etiquetas-d8385.firebasestorage.app",
+  messagingSenderId: "269761879207",
+  appId: "1:269761879207:web:653a30302ddef6c27dcf82"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+// Cada "chave" (baseData, etiquetas, pedidos, suppressedAuto) vira UM
+// documento na coleção appData, com o conteúdo inteiro no campo "payload".
+// Isso espelha o antigo esquema de localStorage (1 chave = 1 blob), só que
+// agora vive no servidor, atrás de autenticação — não mais no navegador.
+window.fsGet = async function(key){
+  const snap = await getDoc(doc(db, 'appData', key));
+  return snap.exists() ? snap.data().payload : null;
+};
+window.fsSet = async function(key, value){
+  await setDoc(doc(db, 'appData', key), {
+    payload: value,
+    atualizadoEm: new Date().toISOString()
+  });
+  return true;
+};
+
+onAuthStateChanged(auth, (user) => {
+  if (!user) {
+    window.location.replace("index.html");
+    return;
+  }
+  console.log("Usuário autenticado:", user.email);
+  document.body.classList.remove('auth-pending');
+  window.dispatchEvent(new Event('app:authenticated'));
+});
+
+window.logout = function(){
+  signOut(auth)
+    .then(() => {
+      window.location.replace("index.html");
+    })
+    .catch((error)=>{
+      console.error(error);
+    });
+};
+</script>
 </head>
-<body>
+<body class="auth-pending">
 <div id="app-shell">
  <div class="topbar">
   <div class="brand">
@@ -245,19 +289,12 @@ tbody tr:last-child td{border-bottom:none;}
       <p>Base de dados, drill-down de etiquetas e pedidos</p>
     </div>
   </div>
-
   <div class="topbar-right">
     <div class="record-counter">
       Registros: <b id="record-count">0</b>/999
     </div>
-
-    <button class="btn-danger-ghost" onclick="logout()">
-      Sair
-    </button>
-
-    <button class="btn-danger-ghost" id="btn-excluir-tudo">
-      Excluir tudo
-    </button>
+    <button class="btn-danger-ghost" onclick="logout()">Sair</button>
+    <button class="btn-danger-ghost" id="btn-excluir-tudo">Excluir tudo</button>
   </div>
 </div>
 
@@ -274,149 +311,11 @@ tbody tr:last-child td{border-bottom:none;}
 
 <script>
 /* =========================================================================
-   DADOS SEMENTE (do briefing) — colunas: [codigo,pais,projeto,sku,marca,
-   submarca,versao,embalagem,peso,distribuidor,startup]
-   ========================================================================= */
-const SEED_ROWS = [
-["ETQ_00030","ARGENTINA","ALEVINO FASE2.1","101000","HONDASHI","-","VAREJO","FLOPPY","60g","","2025-01-01"],
-["ETQ_00044","ARGENTINA","ALEVINO-LATAM","100002","AJI-NO-MOTO","-","VAREJO","FRASCO","100g","","2025-01-01"],
-["ETQ_00101","ARGENTINA","AJIBRAND","100001","AJI-NO-MOTO","-","VAREJO","FLOPPY","36g","","2026-07-01"],
-["ETQ_00167","PARAGUAI","AJIBRAND","100001","AJI-NO-MOTO","-","VAREJO","FLOPPY","36g","SALEMMA","2026-07-01"],
-["ETQ_00196","COLOMBIA","AJIBRAND","100001","AJI-NO-MOTO","-","VAREJO","FLOPPY","36g","","2026-07-01"],
-["ETQ_00044","ARGENTINA","AJIBRAND","100002","AJI-NO-MOTO","-","VAREJO","FRASCO","100g","","2026-10-05"],
-["ETQ_00045","PARAGUAI","THANOS-LATAM","100005","AJI-NO-MOTO","-","VAREJO","BAG","500g","SALEMMA","2025-01-01"],
-["ETQ_00047","PARAGUAI","THANOS-LATAM","100002","AJI-NO-MOTO","-","VAREJO","FRASCO","100g","SALEMMA","2025-01-01"],
-["ETQ_00048","PARAGUAI","THANOS-LATAM","100003","AJI-NO-MOTO","-","VAREJO","REFIL","100g","SALEMMA","2025-01-01"],
-["ETQ_00049","PARAGUAI","THANOS-LATAM","102005","SAZON","TEMPERO","FEIJAO-MARROM","FLOPPY","60g","SALEMMA","2026-06-30"],
-["ETQ_00105","ARGENTINA","SOFT","100007","AJI-NO-MOTO","-","FOOD SERVICE","BAG","2kg","","2025-05-31"],
-["ETQ_00147","COLOMBIA","SOFT","100008","AJI-NO-MOTO","-","FOOD SERVISE","SACO","10kg","","2025-05-31"],
-["ETQ_00162","COLOMBIA","SOFT","100007","AJI-NO-MOTO","-","FOOD SERVICE","BAG","2kg","","2025-05-31"],
-["ETQ_00177","PARAGUAI","PUENTE","100002","AJI-NO-MOTO","-","VAREJO","FRASCO","100g","San Jose","2026-01-31"],
-["ETQ_00178","PARAGUAI","PUENTE","100003","AJI-NO-MOTO","-","VAREJO","REFIL","100g","San Jose","2026-01-31"],
-["ETQ_00179","PARAGUAI","PUENTE","100005","AJI-NO-MOTO","-","VAREJO","BAG","500g","San Jose","2026-01-31"],
-["ETQ_00050","PARAGUAI","THANOS-LATAM","101500","SABOR A MI","-","ALHO E SAL","COPO","300g","SALEMMA","2025-01-01"],
-["ETQ_00051","PARAGUAI","THANOS-LATAM","101501","SABOR A MI","-","SEM PIMENTA","COPO","300g","SALEMMA","2025-01-01"],
-["ETQ_00052","PARAGUAI","THANOS-LATAM","101502","SABOR A MI","-","COM PIMENTA","COPO","300g","SALEMMA","2025-01-01"],
-["ETQ_00053","PARAGUAI","THANOS-LATAM","101503","SABOR A MI","-","ALHO E SAL","COPO","1kg","SALEMMA","2025-01-01"],
-["ETQ_00054","PARAGUAI","THANOS-LATAM","101504","SABOR A MI","-","SEM PIMENTA","COPO","1kg","SALEMMA","2025-01-01"],
-["ETQ_00055","PARAGUAI","THANOS-LATAM","101505","SABOR A MI","-","COM PIMENTA","COPO","1kg","SALEMMA","2025-01-01"],
-["ETQ_00180","PARAGUAI","PUENTE","100007","AJI-NO-MOTO","-","FOOD SERVICE","BAG","2kg","San Jose","2026-01-31"],
-["ETQ_00056","PARAGUAI","SUBLi","100507","AJI-SAL","-","CHURRASCO","BAG","500g","SALEMMA","2025-01-01"],
-["ETQ_00199","PARAGUAI","SOFT","100007","AJI-NO-MOTO","-","FOOD SERVICE","BAG","2kg","SALEMMA","2025-05-31"],
-["ETQ_00056","PARAGUAI","PUENTE","100507","AJI-SAL","-","CHURRASCO","BAG","500g","SALEMMA","2026-01-31"],
-["ETQ_00057","PARAGUAI","THANOS-LATAM","100502","AJI-SAL","-","TRADICIONAL","BAG","250g","SALEMMA","2025-01-01"],
-["ETQ_00058","PARAGUAI","THANOS-LATAM","100503","AJI-SAL","-","TRADICIONAL","FRASCO","100g","SALEMMA","2025-01-01"],
-["ETQ_00057","PARAGUAI","SALFINO","100502","AJI-SAL","-","TRADICIONAL","BAG","250g","SALEMMA","2026-04-24"],
-["ETQ_00060","ARGENTINA","ALEVINO FASE2.1","101003","HONDASHI","-","FOOD SERVICE","BAG","500g","","2026-01-06"],
-["ETQ_00058","PARAGUAI","SALFINO","100503","AJI-SAL","-","TRADICIONAL","FRASCO","100g","SALEMMA","2026-06-10"],
-["ETQ_00081","PERU","THANOS-LATAM","106032","AMACIANTE","-","FOOD SERVICE","BAG","1kg","","2025-01-01"],
-["ETQ_00084","ARGENTINA","OUT","104576","SAZON","CALDO","GALINHA-AMARELO","BAG","1,1kg","","2025-01-01"],
-["ETQ_00181","PARAGUAI","PUENTE","100507","AJI-SAL","-","CHURRASCO","BAG","500g","San Jose","2026-01-31"],
-["ETQ_00081","PERU","SOLES","106032","AMACIANTE","-","FOOD SERVICE","BAG","1kg","","2026-01-01"],
-["ETQ_00085","ARGENTINA","OUT","104578","SAZON","CALDO","CARNE-VERMELHO","BAG","1,1kg","","2025-01-01"],
-["ETQ_00086","ARGENTINA","OUT","104577","SAZON","CALDO","LEGUMES-VERDE","BAG","1,1kg","","2025-01-01"],
-["ETQ_00089","ARGENTINA","OUT","102019","SAZON","TEMPERO","AVES-VERDE","BAG","900g","","2025-01-01"],
-["ETQ_00090","ARGENTINA","OUT","102021","SAZON","TEMPERO","CARNE-VERMELHO","BAG","900g","","2025-01-01"],
-["ETQ_00091","ARGENTINA","OUT","102029","SAZON","TEMPERO","LEGUMES-AMARELO","BAG","900g","","2025-01-01"],
-["ETQ_00047","PARAGUAI","AJIBRAND","100002","AJI-NO-MOTO","-","VAREJO","FRASCO","100g","SALEMMA","2026-10-05"],
-["ETQ_00145","MEXICO","AJIBRAND","100002","AJI-NO-MOTO","-","VAREJO","FRASCO","100g","","2026-10-05"],
-["ETQ_00197","COLOMBIA","AJIBRAND","100002","AJI-NO-MOTO","-","VAREJO","FRASCO","100g","","2026-10-05"],
-["ETQ_00048","PARAGUAI","AJIBRAND","100003","AJI-NO-MOTO","-","VAREJO","REFIL","100g","SALEMMA","2025-11-17"],
-["ETQ_00100","ARGENTINA","ALEVINO-LATAM","100003","AJI-NO-MOTO","-","VAREJO","REFIL","100g","","2026-02-27"],
-["ETQ_00101","ARGENTINA","ALEVINO-LATAM","100001","AJI-NO-MOTO","-","VAREJO","FLOPPY","36g","","2026-02-27"],
-["ETQ_00102","ARGENTINA","ALEVINO-LATAM","100004","AJI-NO-MOTO","-","VAREJO","BAG","200g","","2026-07-31"],
-["ETQ_00103","ARGENTINA","ALEVINO-LATAM","100005","AJI-NO-MOTO","-","VAREJO","BAG","500g","","2026-07-31"],
-["ETQ_00214","PERU","SOLES","107516","EXTRATO DE TOMATE","-","FOOD SERVICE","POUCH","2kg","","2026-01-01"],
-["ETQ_00105","ARGENTINA","ALEVINO-LATAM","100007","AJI-NO-MOTO","-","FOOD SERVICE","BAG","2kg","","2026-07-31"],
-["ETQ_00059","PARAGUAI","ALEVINO FASE2.1","101000","HONDASHI","-","VAREJO","FLOPPY","60g","SALEMMA","2025-01-01"],
-["ETQ_00100","ARGENTINA","AJIBRAND","100003","AJI-NO-MOTO","-","VAREJO","REFIL","100g","","2025-11-17"],
-["ETQ_00145","MEXICO","AJINOMEX","100002","AJI-NO-MOTO","-","VAREJO","FRASCO","100g","","2025-01-01"],
-["ETQ_00106","EQUADOR","ALEVINO FASE2.1","101003","HONDASHI","-","FOOD SERVICE","BAG","500g","","2025-01-01"],
-["ETQ_00147","COLOMBIA","THANOS-LATAM","100008","AJI-NO-MOTO","-","FOOD SERVISE","SACO","10kg","","2025-01-01"],
-["ETQ_00148","COLOMBIA","THANOS-LATAM","130014/130047","AJI-NO-MOTO","-","REGULAR","SACO","25kg","","2025-01-01"],
-["ETQ_00149","ARGENTINA","ALEVINO-LATAM","130014/130047","AJI-NO-MOTO","-","REGULAR","SACO","25kg","","2026-01-06"],
-["ETQ_00150","MEXICO","THANOS-LATAM","1300016","AJI-NO-MOTO","-","REGULAR","SACO","50lb","","2025-01-01"],
-["ETQ_00151","ARGENTINA","ALEVINO-LATAM","130003","AJI-NO-MOTO","-","FINO","SACO","25kg","","2026-02-27"],
-["ETQ_00152","ARGENTINA","ALEVINO-LATAM","130174","AJI-NO-MOTO","-","LARGO","SACO","25kg","","2026-02-27"],
-["ETQ_00182","PARAGUAI","PUENTE","101000","HONDASHI","-","VAREJO","FLOPPY","60g","San Jose","2026-01-31"],
-["ETQ_00162","COLOMBIA","RECOL","100007","AJI-NO-MOTO","-","FOOD SERVICE","BAG","2kg","","2025-01-01"],
-["ETQ_00198","COLOMBIA","AJIBRAND","100003","AJI-NO-MOTO","-","VAREJO","REFIL","100g","","2025-11-17"],
-["ETQ_00102","ARGENTINA","AJIBRAND","100004","AJI-NO-MOTO","-","VAREJO","BAG","200g","","2025-10-31"],
-["ETQ_00167","PARAGUAI","THANOS-LATAM","100001","AJI-NO-MOTO","-","VAREJO","FLOPPY","36g","SALEMMA","2025-01-01"],
-["ETQ_00168","PARAGUAI","THANOS-LATAM","100004","AJI-NO-MOTO","-","VAREJO","BAG","200g","SALEMMA","2025-01-01"],
-["ETQ_00169","PARAGUAI","SUBLi","100520","AJI-SAL","-","PARRILLA","POTE","500g","SALEMMA","2025-01-01"],
-["ETQ_00176","PARAGUAI","ALEVINO FASE2.1","101003","HONDASHI","-","FOOD SERVICE","BAG","500g","SALEMMA","2025-01-01"],
-["ETQ_00183","PARAGUAI","PUENTE","101003","HONDASHI","-","FOOD SERVICE","BAG","500g","San Jose","2026-01-31"],
-["ETQ_00050","PARAGUAI","PATRONO","101500","SABOR A MI","-","ALHO E SAL","COPO","300g","SALEMMA","2025-11-30"],
-["ETQ_00051","PARAGUAI","PATRONO","101501","SABOR A MI","-","SEM PIMENTA","COPO","300g","SALEMMA","2025-11-30"],
-["ETQ_00052","PARAGUAI","PATRONO","101502","SABOR A MI","-","COM PIMENTA","COPO","300g","SALEMMA","2025-11-30"],
-["ETQ_00053","PARAGUAI","PATRONO","101503","SABOR A MI","-","ALHO E SAL","COPO","1kg","SALEMMA","2025-11-30"],
-["ETQ_00054","PARAGUAI","PATRONO","101504","SABOR A MI","-","SEM PIMENTA","COPO","1kg","SALEMMA","2025-11-30"],
-["ETQ_00055","PARAGUAI","PATRONO","101505","SABOR A MI","-","COM PIMENTA","COPO","1kg","SALEMMA","2025-11-30"],
-["ETQ_00184","PARAGUAI","PUENTE","101501","SABOR A MI","-","SEM PIMENTA","COPO","300g","San Jose","2026-01-31"],
-["ETQ_00185","PARAGUAI","PUENTE","101502","SABOR A MI","-","COM PIMENTA","COPO","300g","San Jose","2026-01-31"],
-["ETQ_00186","PARAGUAI","PUENTE","101500","SABOR A MI","-","ALHO E SAL","COPO","300g","San Jose","2026-01-31"],
-["ETQ_00187","PARAGUAI","PUENTE","101505","SABOR A MI","-","COM PIMENTA","COPO","1kg","San Jose","2026-01-31"],
-["ETQ_00188","PARAGUAI","PUENTE","101504","SABOR A MI","-","SEM PIMENTA","COPO","1kg","San Jose","2026-01-31"],
-["ETQ_00189","PARAGUAI","PUENTE","101503","SABOR A MI","-","ALHO E SAL","COPO","1kg","San Jose","2026-01-31"],
-["ETQ_00211","PARAGUAI","PATRONO","101545","SABOR A MI","-","ALHO E SAL","COPO","1,01kg","SALEMMA","2025-11-30"],
-["ETQ_00212","PARAGUAI","PATRONO","101547","SABOR A MI","-","SEM PIMENTA","COPO","1,01kg","SALEMMA","2025-11-30"],
-["ETQ_00213","PARAGUAI","PATRONO","101546","SABOR A MI","-","COM PIMENTA","COPO","1,01kg","SALEMMA","2025-11-30"],
-["ETQ_00085","ARGENTINA","LUCA","104578","SAZON","CALDO","CARNE-VERMELHO","BAG","1,1kg","","2026-01-31"],
-["ETQ_00086","ARGENTINA","LUCA","104577","SAZON","CALDO","LEGUMES-VERDE","BAG","1,1kg","","2026-01-31"],
-["ETQ_00190","PARAGUAI","PUENTE","102027","SAZON","TEMPERO INTERNACIONAL","CARNES","FLOPPY","60g","San Jose","2026-01-31"],
-["ETQ_00168","PARAGUAI","AJIBRAND","100004","AJI-NO-MOTO","-","VAREJO","BAG","200g","SALEMMA","2025-10-31"],
-["ETQ_00045","PARAGUAI","AJIBRAND","100005","AJI-NO-MOTO","-","VAREJO","BAG","500g","SALEMMA","2026-01-06"],
-["ETQ_00103","ARGENTINA","AJIBRAND","100005","AJI-NO-MOTO","-","VAREJO","BAG","500g","","2026-01-06"],
-["ETQ_00196","COLOMBIA","RECOL","100001","AJI-NO-MOTO","-","VAREJO","FLOPPY","36g","","2025-01-01"],
-["ETQ_00197","COLOMBIA","RECOL","100002","AJI-NO-MOTO","-","VAREJO","FRASCO","100g","","2025-01-01"],
-["ETQ_00198","COLOMBIA","RECOL","100003","AJI-NO-MOTO","-","VAREJO","REFIL","100g","","2025-01-01"],
-["ETQ_00191","PARAGUAI","PUENTE","102026","SAZON","TEMPERO INTERNACIONAL","GALINHA","FLOPPY","60g","San Jose","2026-01-31"],
-["ETQ_00199","PARAGUAI","ASUNCION/","100007","AJI-NO-MOTO","-","FOOD SERVICE","BAG","2kg","SALEMMA","2025-01-01"],
-["ETQ_00192","PARAGUAI","PUENTE","102024","SAZON","TEMPERO INTERNACIONAL","MASSAS","FLOPPY","60g","San Jose","2026-01-31"],
-["ETQ_00193","PARAGUAI","PUENTE","102022","SAZON","TEMPERO INTERNACIONAL","VERDURAS","FLOPPY","60g","San Jose","2026-01-31"],
-["ETQ_00194","PARAGUAI","PUENTE","102023","SAZON","TEMPERO INTERNACIONAL","ARROZ","FLOPPY","60g","San Jose","2026-01-31"],
-["ETQ_00209","COSTA RICA","CARIBE","101003","HONDASHI","-","FOOD SERVICE","BAG","500g","","2025-01-01"],
-["ETQ_00210","COSTA RICA","CARIBE","106032","AMACIANTE","-","FOOD SERVICE","BAG","1kg","","2025-01-01"],
-["ETQ_00195","PARAGUAI","PUENTE","102005","SAZON","TEMPERO INTERNACIONAL","FEIJAO","FLOPPY","60g","San Jose","2026-01-31"],
-["ETQ_00201","PARAGUAI","PUENTE","102180","SAZON","TEMPERO","CARNE-VERMELHO","FLOPPY","40g","San Jose","2026-06-30"],
-["ETQ_00202","PARAGUAI","PUENTE","102102","SAZON","TEMPERO","LEGUMES-AMARELO","FLOPPY","40g","San Jose","2026-06-30"],
-["ETQ_00203","PARAGUAI","PUENTE","102092","SAZON","TEMPERO","GALINHA-VERDE","FLOPPY","40g","San Jose","2026-06-30"],
-["ETQ_00219","PARAGUAI","PUENTE","102014","SAZON","TEMPERO","ARROZ","FLOPPY","60g","San Jose","2026-06-30"],
-["ETQ_00220","PARAGUAI","PUENTE","102002","SAZON","TEMPERO","CARNES","FLOPPY","60g","San Jose","2026-06-30"],
-["ETQ_00221","PARAGUAI","PUENTE","102001","SAZON","TEMPERO","FRANGO","FLOPPY","60g","San Jose","2026-06-30"],
-["ETQ_00222","PARAGUAI","PUENTE","102003","SAZON","TEMPERO","LEGUMES","FLOPPY","60g","San Jose","2026-06-30"],
-["ETQ_00223","PARAGUAI","PUENTE","102004","SAZON","TEMPERO","MASSAS","FLOPPY","60g","San Jose","2026-06-30"]
-];
-
-function buildSeedData(){
-  let out = [];
-  let idCounter = 1;
-  SEED_ROWS.forEach(r=>{
-    const [codigo,pais,projeto,skuRaw,marca,submarca,versao,embalagem,peso,distribuidor,startup] = r;
-    const skus = skuRaw.includes('/') ? skuRaw.split('/').map(s=>s.trim()).filter(Boolean) : [skuRaw];
-    skus.forEach(sku=>{
-      out.push({
-        id:'db_'+(idCounter++),
-        codigo:(codigo||'').trim(),
-        pais:(pais||'').trim(),
-        projeto:(projeto||'').trim(),
-        sku:sku.trim().toUpperCase(),
-        marca:(marca||'').trim(),
-        submarca:(submarca||'').trim(),
-        versao:(versao||'').trim(),
-        embalagem:(embalagem||'').trim(),
-        peso:(peso||'').trim(),
-        distribuidor:(distribuidor||'').trim(),
-        startup:(startup||'').trim()
-      });
-    });
-  });
-  return out;
-}
-
-/* =========================================================================
    ESTADO GLOBAL
+   Os dados não são mais gerados a partir de SEED_ROWS embutido no arquivo.
+   Eles vêm inteiramente do Firestore (via window.fsGet), que precisa ser
+   populado uma vez usando o arquivo migrar-dados.html (uso único, não fica
+   publicado permanentemente).
    ========================================================================= */
 let baseData = [];
 let etiquetas = [];
@@ -446,47 +345,21 @@ function toast(msg){
   setTimeout(()=>{ if(el.parentNode) el.parentNode.removeChild(el); }, 3200);
 }
 
-/* ---------- Inicialização ---------- */
-window.addEventListener('load', async () => {
+window.addEventListener('app:authenticated', async () => {
     await boot();
-});
+}, { once: true });
 
-/* ---------- Persistência (localStorage do navegador) ---------- */
-const STORAGE_PREFIX = 'etq_';
-// Sempre que os dados semente (SEED_ROWS) forem atualizados no código-fonte,
-// suba este número — isso faz a Base de Dados de quem já usou o site antes
-// ser substituída automaticamente pela nova versão, na próxima vez que abrir.
-const SEED_VERSION = 2;
-
+/* ---------- Persistência (Firestore) ---------- */
 async function loadAll(){
-  try{
-    const storedVersion = parseInt(localStorage.getItem(STORAGE_PREFIX+'seedVersion') || '0', 10);
-    const raw = localStorage.getItem(STORAGE_PREFIX+'baseData');
-    if(raw && storedVersion === SEED_VERSION){
-      baseData = JSON.parse(raw);
-    } else {
-      baseData = buildSeedData();
-      await saveBaseData();
-      localStorage.setItem(STORAGE_PREFIX+'seedVersion', String(SEED_VERSION));
-    }
-  }catch(e){ baseData = buildSeedData(); }
-  try{
-    const raw = localStorage.getItem(STORAGE_PREFIX+'etiquetas');
-    etiquetas = raw ? JSON.parse(raw) : [];
-  }catch(e){ etiquetas = []; }
-  try{
-    const raw = localStorage.getItem(STORAGE_PREFIX+'pedidos');
-    pedidos = raw ? JSON.parse(raw) : [];
-  }catch(e){ pedidos = []; }
-  try{
-    const raw = localStorage.getItem(STORAGE_PREFIX+'suppressedAuto');
-    suppressedAuto = raw ? JSON.parse(raw) : {};
-  }catch(e){ suppressedAuto = {}; }
+  try{ baseData = (await window.fsGet('baseData')) || []; }catch(e){ baseData = []; toast('Erro ao carregar Base de Dados.'); }
+  try{ etiquetas = (await window.fsGet('etiquetas')) || []; }catch(e){ etiquetas = []; }
+  try{ pedidos = (await window.fsGet('pedidos')) || []; }catch(e){ pedidos = []; }
+  try{ suppressedAuto = (await window.fsGet('suppressedAuto')) || {}; }catch(e){ suppressedAuto = {}; }
 }
 
 async function safeSet(key, value){
   try{
-    localStorage.setItem(STORAGE_PREFIX+key, JSON.stringify(value));
+    await window.fsSet(key, value);
     return true;
   }catch(e){
     toast('Erro ao salvar: '+(e && e.message ? e.message : 'desconhecido'));
@@ -514,7 +387,6 @@ function calcLote(dateStr){
   const doy = String(dayOfYear(d)).padStart(3,'0');
   return 'L'+year+doy;
 }
-// Lote do último dia antes de uma data de startup (usado quando já existe a próxima etiqueta agendada)
 function calcLoteAntesDe(dateStr){
   if(!dateStr) return '';
   const d = new Date(dateStr+'T00:00:00');
@@ -539,15 +411,12 @@ function groupProducts(){
   return Array.from(map.values());
 }
 
-// Valores únicos de um campo da Base de Dados, para popular os filtros da aba Etiquetas.
 function uniqueFieldValues(field){
   const vals = new Set();
   baseData.forEach(r=>{ const v=(r[field]||'').trim(); if(v) vals.add(v); });
   return Array.from(vals).sort((a,b)=>a.localeCompare(b));
 }
 
-// Aplica os filtros selecionados (País, Projeto, SKU, Marca, Submarca, Versão,
-// Embalagem, Peso, Distribuidor) sobre a lista de produtos agrupados.
 function applyEtiquetaFiltros(products){
   const f = etiquetaFiltros;
   return products.filter(p=>{
@@ -606,7 +475,6 @@ function productDisplayName(p){
   return parts.join(' · ');
 }
 
-// "Família" = mesmo SKU (produto) + país + distribuidor — é exatamente o nodeKey
 function nodeKeyOf(productKey, pais, distribuidor){
   return productKey+'::'+pais+'::'+(distribuidor||'');
 }
@@ -616,10 +484,6 @@ function autoNomeEtiqueta(row, distribuidor){
   return parts.filter(Boolean).join(' ');
 }
 
-// Regras de vigência:
-// 1) Uma etiqueta está vigente se seu Startup for <= hoje.
-// 2) Se há mais de uma etiqueta vigente possível na mesma família (mesmo SKU+país+distribuidor),
-//    a de Startup mais recente (mais próximo de hoje, sem ultrapassar) é a vigente.
 function computeFamilyStatus(nodeKey){
   const list = etiquetas
     .filter(e=>e.nodeKey===nodeKey && e.dataStartup)
@@ -633,15 +497,11 @@ function computeFamilyStatus(nodeKey){
   if(vigente){
     next = list.find(e=> e.dataStartup > vigente.dataStartup) || null;
   } else if(list.length){
-    next = list[0]; // todas futuras, nenhuma vigente ainda
+    next = list[0];
   }
   return {list, vigente, next};
 }
 
-// Lote recomendado:
-// 1) Se a etiqueta é a vigente e NÃO há próxima etiqueta agendada -> lote da semana (calculado a partir de hoje).
-// 2) Se a etiqueta é a vigente e HÁ uma próxima etiqueta com startup futuro -> lote calculado um dia
-//    antes do startup da próxima etiqueta (último lote possível ainda sob a etiqueta atual).
 function loteRecomendado(e, status){
   if(!status.vigente || status.vigente.id !== e.id) return null;
   if(status.next) return calcLoteAntesDe(status.next.dataStartup);
@@ -660,10 +520,6 @@ function syncEtiquetasFromBaseData(){
     const startup = row.startup.trim();
     const productKey = productKeyOf(row);
     const nodeKey = nodeKeyOf(productKey, row.pais, row.distribuidor||null);
-    // Inclui o projeto na chave: se dois registros da Base de Dados têm o mesmo
-    // Código, país, produto e distribuidor mas projetos diferentes (com startups
-    // diferentes), cada um deve virar sua PRÓPRIA etiqueta — senão um sobrescreve
-    // o outro silenciosamente e a etiqueta desativada/histórica desaparece do sistema.
     const autoKey = nodeKey+'::'+row.codigo+'::'+row.projeto;
     validAutoKeys.add(autoKey);
     const nome = autoNomeEtiqueta(row, row.distribuidor);
@@ -788,7 +644,7 @@ function renderDbTab(){
             <th>Versão</th><th>Embalagem</th><th>Peso</th><th>Distribuidor</th><th>Startup</th><th></th>
           </tr></thead>
           <tbody>
-            ${rows.length===0 ? `<tr><td colspan="12"><div class="empty-state" style="border:none; padding:20px 0;">Nenhum registro encontrado.</div></td></tr>` :
+            ${rows.length===0 ? `<tr><td colspan="12"><div class="empty-state" style="border:none; padding:20px 0;">Nenhum registro encontrado. Se esta é a primeira vez que o app roda com o novo backend, use o arquivo de migração para importar os dados iniciais, ou clique em "+ Novo registro" / "Importar CSV/TSV".</div></td></tr>` :
               rows.map(r=>`
               <tr data-id="${r.id}">
                 <td class="mono">${escapeHtml(r.codigo)}</td>
@@ -1152,11 +1008,6 @@ function openEtiquetaModal(existing){
 /* =========================================================================
    RENDER: ABA PEDIDOS
    ========================================================================= */
-// Aceita colar qualquer coisa (lista simples, ou uma tabela copiada de planilha
-// com colunas extras como Produto/Qtd). Só entram na lista os tokens que forem
-// um código numérico de 6 dígitos ou mais — é o único dado usado para achar a
-// etiqueta e o lote. Qualquer outro texto colado junto (nome de produto,
-// quantidade, cabeçalho de coluna) é automaticamente ignorado.
 function parseSkuPaste(text){
   const tokens = text.split(/[\r\n\t,;]+/).map(s=>s.trim());
   const skus = [];
@@ -1166,8 +1017,6 @@ function parseSkuPaste(text){
   return Array.from(new Set(skus));
 }
 
-// Compatibilidade: pedidos salvos numa versão anterior que guardava "itens"
-// (com produto/qtd) em vez da lista simples de SKUs.
 function skusDoPedido(p){
   if(p.skus) return p.skus;
   return (p.itens||[]).map(it=>it.sku);
@@ -1197,9 +1046,6 @@ function renderPedidosTab(){
   `;
 }
 
-// Monta, para um pedido, a lista de SKUs cruzados com a Base de Dados e a
-// etiqueta/lote vigentes na data do pedido. Usado tanto para renderizar a
-// tela quanto para gerar a planilha Excel — mesma lógica, uma fonte só.
 function buildPedidoRows(p){
   return skusDoPedido(p).map(sku=>{
     const baseRow = baseData.find(r=>r.sku===sku && r.pais===p.pais && ((r.distribuidor||'')===(p.distribuidor||'')));
@@ -1381,10 +1227,6 @@ function openModal({title, bodyHtml, footHtml, onMount}){
 }
 function closeModal(){ $('#modal-root').innerHTML = ''; }
 
-// Substitui o confirm() nativo do navegador — que pode ser bloqueado
-// silenciosamente em ambientes de iframe restrito (ex: apps embedados),
-// fazendo o botão "não fazer nada" sem aviso nenhum. Este modal é 100%
-// nosso, então funciona em qualquer ambiente.
 function confirmModal(message){
   return new Promise(resolve=>{
     openModal({
@@ -1547,66 +1389,10 @@ $('#btn-excluir-tudo').onclick = async ()=>{
 
 async function boot(){
   await loadAll();
-  await runSync(false); // gera automaticamente as etiquetas a partir da Base de Dados ao entrar
+  await runSync(false);
   render();
 }
-
-boot();
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
-import {
-  getAuth,
-  onAuthStateChanged,
-  signOut
-} from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyCTJyf-S1SFIQIG5l6y_EV06-dqnc6SxsQ",
-  authDomain: "controle-de-etiquetas-d8385.firebaseapp.com",
-  projectId: "controle-de-etiquetas-d8385",
-  storageBucket: "controle-de-etiquetas-d8385.firebasestorage.app",
-  messagingSenderId: "269761879207",
-  appId: "1:269761879207:web:653a30302ddef6c27dcf82"
-};
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-
-// ===============================
-// PROTEÇÃO DA PÁGINA
-// ===============================
-onAuthStateChanged(auth, (user) => {
-
-  if (!user) {
-    window.location.replace("index.html");
-    return;
-  }
-
-  console.log("Usuário autenticado:", user.email);
-
-});
-
-// ===============================
-// LOGOUT
-// ===============================
-window.logout = function(){
-
-  signOut(auth)
-    .then(() => {
-
-      window.location.replace("index.html");
-
-    })
-    .catch((error)=>{
-
-      console.error(error);
-
-    });
-
-}
-
-  </script>
-  </body>
+</body>
 </html>

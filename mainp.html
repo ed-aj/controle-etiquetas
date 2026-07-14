@@ -116,6 +116,9 @@ input,select,textarea{font-family:'Inter',sans-serif; font-size:13.5px;}
 .crumb-sep{color:var(--ink-faint);}
 
 /* ---------- Card grids ---------- */
+.crumbs-row{display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:20px;}
+.crumbs-row .crumbs{margin-bottom:0;}
+
 .filters-bar{background:var(--surface-alt); border:1px solid var(--border); border-radius:var(--radius-lg); padding:16px 18px; margin-bottom:18px;}
 .filters-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:12px;}
 
@@ -422,8 +425,9 @@ let suppressedAuto = {}; // autoKey -> dataStartup no momento em que o usuário 
 let activeTab = 'db';
 let etiquetaNav = {level:1, productKey:null, pais:null, distribuidor:null};
 let etiquetaFiltros = {pais:'', projeto:'', sku:'', marca:'', submarca:'', versao:'', embalagem:'', peso:'', distribuidor:''};
+let etiquetaFiltrosVisiveis = false;
 let dbFilter = '';
-let pedidosView = {mode:'list', pedidoId:null, expandedItems:new Set()};
+let pedidosView = {mode:'list', pedidoId:null};
 const TODAY = new Date().toISOString().slice(0,10);
 
 const $ = sel => document.querySelector(sel);
@@ -573,6 +577,8 @@ function renderFiltrosBar(){
     {key:'distribuidor', label:'Distribuidor'}
   ];
   const anyActive = Object.values(etiquetaFiltros).some(v=>v);
+  const total = groupProducts().length;
+  const filtrados = applyEtiquetaFiltros(groupProducts()).length;
   return `
     <div class="filters-bar">
       <div class="filters-grid">
@@ -588,7 +594,9 @@ function renderFiltrosBar(){
           </div>`;
         }).join('')}
       </div>
-      ${anyActive ? `<button class="btn secondary small" id="btn-limpar-filtros-etq" style="margin-top:12px;">Limpar filtros</button>` : ''}
+      <div style="margin-top:12px; display:flex; align-items:center; gap:10px;">
+        ${anyActive ? `<button class="btn secondary small" id="btn-limpar-filtros-etq">Limpar filtros</button><span class="count-pill">${filtrados} de ${total} produtos</span>` : ''}
+      </div>
     </div>
   `;
 }
@@ -642,11 +650,6 @@ function loteRecomendado(e, status){
 
 /* =========================================================================
    SINCRONIZAÇÃO AUTOMÁTICA: BASE DE DADOS -> ETIQUETAS
-   O nome da etiqueta e a Data de Startup são sempre puxados automaticamente
-   da Base de Dados (coluna "Startup"), sem necessidade de cadastro manual
-   um a um. Isso roda automaticamente após qualquer importação de CSV/TSV,
-   após qualquer criação/edição/exclusão de registro na Base de Dados, e
-   pode também ser disparado manualmente pelo botão "Atualizar vigências".
    ========================================================================= */
 function syncEtiquetasFromBaseData(){
   let created=0, updated=0, removed=0;
@@ -657,7 +660,11 @@ function syncEtiquetasFromBaseData(){
     const startup = row.startup.trim();
     const productKey = productKeyOf(row);
     const nodeKey = nodeKeyOf(productKey, row.pais, row.distribuidor||null);
-    const autoKey = nodeKey+'::'+row.codigo;
+    // Inclui o projeto na chave: se dois registros da Base de Dados têm o mesmo
+    // Código, país, produto e distribuidor mas projetos diferentes (com startups
+    // diferentes), cada um deve virar sua PRÓPRIA etiqueta — senão um sobrescreve
+    // o outro silenciosamente e a etiqueta desativada/histórica desaparece do sistema.
+    const autoKey = nodeKey+'::'+row.codigo+'::'+row.projeto;
     validAutoKeys.add(autoKey);
     const nome = autoNomeEtiqueta(row, row.distribuidor);
 
@@ -671,10 +678,9 @@ function syncEtiquetasFromBaseData(){
       }
       return;
     }
-    // Se o usuário excluiu manualmente esta mesma versão (mesmo startup), respeita a exclusão.
     if(suppressedAuto[autoKey] === startup) return;
     if(suppressedAuto[autoKey] !== undefined && suppressedAuto[autoKey] !== startup){
-      delete suppressedAuto[autoKey]; // dado mudou desde a exclusão: volta a gerar
+      delete suppressedAuto[autoKey];
     }
     etiquetas.push({
       id: uid('etq'), source:'auto', autoKey, nodeKey,
@@ -721,8 +727,6 @@ function parseDelimited(text){
   return rows;
 }
 
-// Upsert: atualiza registros que mudaram, adiciona os novos e MANTÉM intactos
-// os que já existiam e não mudaram (chave de identidade = Código + Projeto + SKU).
 function importRowsToDatabase(rows){
   let start = 0;
   if(rows.length && /c[oó]digo/i.test(rows[0][0]||'')) start = 1;
@@ -870,7 +874,7 @@ function openDbRowModal(id){
       };
       if(row){
         $('#modal-delete').onclick = async ()=>{
-          if(!confirm('Excluir este registro da base de dados?')) return;
+          if(!(await confirmModal('Excluir este registro da base de dados?'))) return;
           baseData = baseData.filter(r=>r.id!==row.id);
           await saveBaseData();
           closeModal();
@@ -910,6 +914,10 @@ function renderEtiquetasTab(){
   else if(etiquetaNav.level===2) body = renderLevel2();
   else if(etiquetaNav.level===3) body = renderLevel3();
   else if(etiquetaNav.level===4) body = renderLevel4();
+  const anyActive = Object.values(etiquetaFiltros).some(v=>v);
+  const filtrosBtnHtml = etiquetaNav.level===1
+    ? `<button class="btn secondary small" id="btn-toggle-filtros-etq">${etiquetaFiltrosVisiveis ? 'Ocultar filtros' : 'Filtros'}${anyActive ? ' •' : ''}</button>`
+    : '';
   return `
     <div class="panel">
       <div class="section-title">
@@ -918,7 +926,12 @@ function renderEtiquetasTab(){
         <button class="btn secondary small" id="btn-sync-etiquetas-top">↻ Atualizar vigências</button>
       </div>
       <p class="helper-text">Selecione produto → país → distribuidor para ver a etiqueta e o lote recomendado. Nome e Startup são puxados automaticamente da Base de Dados assim que você salva um registro.</p>
-      ${renderCrumbs()}${body}
+      <div class="crumbs-row">
+        ${renderCrumbs()}
+        ${filtrosBtnHtml}
+      </div>
+      ${(etiquetaNav.level===1 && etiquetaFiltrosVisiveis) ? renderFiltrosBar() : ''}
+      ${body}
     </div>
   `;
 }
@@ -929,11 +942,10 @@ function renderLevel1(){
     return `<div class="empty-state"><h3>Nenhum produto na base</h3><p>Importe ou cadastre registros na aba Base de Dados para começar a criar etiquetas.</p></div>`;
   }
   const products = applyEtiquetaFiltros(allProducts);
-  const filterBar = renderFiltrosBar();
   if(!products.length){
-    return filterBar + `<div class="empty-state"><h3>Nenhum produto encontrado</h3><p>Ajuste ou limpe os filtros acima.</p></div>`;
+    return `<div class="empty-state"><h3>Nenhum produto encontrado</h3><p>Ajuste ou limpe os filtros acima.</p></div>`;
   }
-  return filterBar + `<div class="grid">${products.map(p=>{
+  return `<div class="grid">${products.map(p=>{
     const countries = new Set(p.rows.map(r=>r.pais)).size;
     return `<button class="pick-card" data-pick-product="${p.key}">
       <div class="pc-eyebrow">SKU ${escapeHtml(p.sku)}</div>
@@ -972,8 +984,6 @@ function renderLevel3(){
     etiquetaNav.level = 4; etiquetaNav.distribuidor = null;
     return renderLevel4();
   }
-  // Quando o país mistura registros com e sem distribuidor, a opção "Sem distribuidor"
-  // precisa aparecer também — senão as etiquetas dessa fatia ficam inacessíveis no drill-down.
   return `<div class="grid">
     ${dists.map(d=>`
       <button class="pick-card" data-pick-dist="${escapeHtml(d)}">
@@ -1142,45 +1152,25 @@ function openEtiquetaModal(existing){
 /* =========================================================================
    RENDER: ABA PEDIDOS
    ========================================================================= */
-// Aceita colar uma tabela (Código, Produto, Qnt. CX, Qnt. ETIQ.) — normalmente
-// copiada de uma planilha (colunas separadas por TAB) — ou apenas uma lista de
-// códigos, um por linha. Só entra na lista o que tiver um código numérico de
-// 6 dígitos ou mais (o padrão real dos SKUs); qualquer linha sem esse código
-// (títulos de coluna, texto solto, etc.) é ignorada e não aparece em lugar nenhum.
-// Produto / Qnt. CX / Qnt. ETIQ. não são usados para cruzar com a Base de Dados —
-// servem só de referência no card do pedido.
-function parsePedidoPaste(text){
-  const lines = text.split(/\r\n|\r|\n/).map(l=>l.trim()).filter(l=>l!=='');
-  const itens = [];
-  lines.forEach(line=>{
-    if(line.includes('\t')){
-      // linha vinda de planilha: colunas na ordem Cód. / Produto / Qnt. CX / Qnt. ETIQ.
-      const cols = line.split('\t').map(c=>c.trim());
-      const codigoRaw = cols[0];
-      if(!/^\d{6,}$/.test(codigoRaw)) return; // sem código válido (6+ dígitos) -> linha ignorada
-      itens.push({
-        sku: codigoRaw.toUpperCase(),
-        produto: cols[1] || '',
-        qntCx: cols[2] || '',
-        qntEtiq: cols[3] || ''
-      });
-    } else {
-      // sem TAB: lista simples de códigos, podendo ter mais de um na mesma linha
-      // separados por vírgula/ponto-e-vírgula (comportamento antigo, sem produto/qtd)
-      line.split(/[,;]+/).map(s=>s.trim()).forEach(tok=>{
-        if(/^\d{6,}$/.test(tok)){
-          itens.push({sku: tok.toUpperCase(), produto:'', qntCx:'', qntEtiq:''});
-        }
-      });
-    }
+// Aceita colar qualquer coisa (lista simples, ou uma tabela copiada de planilha
+// com colunas extras como Produto/Qtd). Só entram na lista os tokens que forem
+// um código numérico de 6 dígitos ou mais — é o único dado usado para achar a
+// etiqueta e o lote. Qualquer outro texto colado junto (nome de produto,
+// quantidade, cabeçalho de coluna) é automaticamente ignorado.
+function parseSkuPaste(text){
+  const tokens = text.split(/[\r\n\t,;]+/).map(s=>s.trim());
+  const skus = [];
+  tokens.forEach(tok=>{
+    if(/^\d{6,}$/.test(tok)) skus.push(tok.toUpperCase());
   });
-  return itens;
+  return Array.from(new Set(skus));
 }
 
-// Compatibilidade: pedidos antigos salvos só com a lista simples de SKUs.
-function itensDoPedido(p){
-  if(p.itens) return p.itens;
-  return (p.skus||[]).map(sku=>({sku, produto:'', qntCx:'', qntEtiq:''}));
+// Compatibilidade: pedidos salvos numa versão anterior que guardava "itens"
+// (com produto/qtd) em vez da lista simples de SKUs.
+function skusDoPedido(p){
+  if(p.skus) return p.skus;
+  return (p.itens||[]).map(it=>it.sku);
 }
 
 function renderPedidosTab(){
@@ -1194,40 +1184,48 @@ function renderPedidosTab(){
         <div class="toolbar-left"><span class="count-pill">${pedidos.length} pedido${pedidos.length!==1?'s':''}</span></div>
         <button class="btn small" id="btn-novo-pedido">+ Novo pedido</button>
       </div>
-      ${sorted.length===0 ? `<div class="empty-state"><h3>Nenhum pedido cadastrado</h3><p>Crie um pedido para consultar automaticamente a etiqueta e o lote vigentes de cada item.</p></div>` :
+      ${sorted.length===0 ? `<div class="empty-state"><h3>Nenhum pedido cadastrado</h3><p>Crie um pedido para consultar automaticamente a etiqueta e o lote vigentes de cada SKU.</p></div>` :
         sorted.map(p=>{
-          const n = itensDoPedido(p).length;
+          const n = skusDoPedido(p).length;
           return `
         <div class="pedido-card" data-open-pedido="${p.id}">
           <div class="pc-head"><span>Pedido ${escapeHtml(p.numero)}</span><span class="mono" style="font-size:11.5px; color:var(--ink-soft);">${escapeHtml(p.data)}</span></div>
-          <div class="pc-sub">${escapeHtml(p.pais)}${p.distribuidor?' · '+escapeHtml(p.distribuidor):''} · ${n} ite${n!==1?'ns':'m'}</div>
+          <div class="pc-sub">${escapeHtml(p.pais)}${p.distribuidor?' · '+escapeHtml(p.distribuidor):''} · ${n} SKU${n!==1?'s':''}</div>
         </div>
       `;}).join('')}
     </div>
   `;
 }
 
-function renderPedidoDetail(){
-  const p = pedidos.find(x=>x.id===pedidosView.pedidoId);
-  if(!p){ pedidosView.mode='list'; return renderPedidosTab(); }
-  if(!pedidosView.expandedItems) pedidosView.expandedItems = new Set();
-  const rows = itensDoPedido(p).map(item=>{
-    const sku = item.sku;
+// Monta, para um pedido, a lista de SKUs cruzados com a Base de Dados e a
+// etiqueta/lote vigentes na data do pedido. Usado tanto para renderizar a
+// tela quanto para gerar a planilha Excel — mesma lógica, uma fonte só.
+function buildPedidoRows(p){
+  return skusDoPedido(p).map(sku=>{
     const baseRow = baseData.find(r=>r.sku===sku && r.pais===p.pais && ((r.distribuidor||'')===(p.distribuidor||'')));
     let etiquetaVigente = null;
     if(baseRow){
       const productKey = productKeyOf(baseRow);
       const nodeKey = nodeKeyOf(productKey, p.pais, p.distribuidor || null);
       const status = computeFamilyStatus(nodeKey);
-      // etiqueta vigente na data do pedido (não necessariamente hoje)
       const candidates = status.list.filter(e=> e.dataStartup <= p.data);
       candidates.sort((a,b)=> b.dataStartup.localeCompare(a.dataStartup));
       etiquetaVigente = candidates[0] || null;
       const next = status.list.find(e=> etiquetaVigente && e.dataStartup > etiquetaVigente.dataStartup) || null;
       if(etiquetaVigente) etiquetaVigente = {...etiquetaVigente, _next: next};
     }
-    return {item, baseRow, etiquetaVigente};
+    const lote = etiquetaVigente ? (etiquetaVigente._next ? calcLoteAntesDe(etiquetaVigente._next.dataStartup) : calcLote(p.data)) : '';
+    const nomeProduto = baseRow
+      ? [baseRow.marca, baseRow.submarca!=='-'?baseRow.submarca:'', baseRow.versao, baseRow.embalagem, baseRow.peso].filter(Boolean).join(' · ')
+      : '';
+    return {sku, baseRow, etiquetaVigente, lote, nomeProduto};
   });
+}
+
+function renderPedidoDetail(){
+  const p = pedidos.find(x=>x.id===pedidosView.pedidoId);
+  if(!p){ pedidosView.mode='list'; return renderPedidosTab(); }
+  const rows = buildPedidoRows(p);
 
   return `
     <div class="panel">
@@ -1237,6 +1235,7 @@ function renderPedidoDetail(){
         <span class="crumb active">${escapeHtml(p.numero)}</span>
       </div>
       <div class="section-title"><h2>Pedido ${escapeHtml(p.numero)}</h2><div class="rule"></div>
+        <button class="btn secondary small" id="btn-excel-pedido" data-id="${p.id}">⬇ Baixar Excel</button>
         <button class="btn warn small" id="btn-delete-pedido" data-id="${p.id}">Excluir pedido</button>
       </div>
       <div class="ef-row" style="margin-bottom:18px;">
@@ -1244,39 +1243,29 @@ function renderPedidoDetail(){
         <div><b>País</b>${escapeHtml(p.pais)}</div>
         <div><b>Distribuidor</b>${escapeHtml(p.distribuidor||'—')}</div>
       </div>
-      <h4 style="font-size:12px; color:var(--ink-faint); margin-bottom:10px;">Itens do pedido — clique num item para ver os detalhes</h4>
-      ${rows.map((r,i)=>{
-        const lote = r.etiquetaVigente ? (r.etiquetaVigente._next ? calcLoteAntesDe(r.etiquetaVigente._next.dataStartup) : calcLote(p.data)) : '';
-        const it = r.item;
-        const expanded = pedidosView.expandedItems.has(i);
-        const nomeProduto = r.baseRow
-          ? [r.baseRow.marca, r.baseRow.submarca!=='-'?r.baseRow.submarca:'', r.baseRow.versao, r.baseRow.embalagem, r.baseRow.peso].filter(Boolean).join(' · ')
-          : '';
-        return `
-        <div class="etiqueta-final" style="margin-bottom:10px; cursor:pointer;" data-toggle-item="${i}">
-          <div class="ef-top">
-            <div class="ef-name mono" style="font-size:14px;">${escapeHtml(it.sku)}</div>
-            ${!r.baseRow ? `<div class="ef-status off">Código não encontrado na base</div>` : (r.etiquetaVigente ? `<div class="ef-status on">Etiqueta vigente</div>` : `<div class="ef-status off">Sem etiqueta vigente</div>`)}
-          </div>
-          ${nomeProduto ? `<div class="ef-row"><div><b>Produto</b>${escapeHtml(nomeProduto)}</div></div>` : ''}
-          ${r.etiquetaVigente ? `
-            <div style="margin-top:12px; font-family:'Inter',sans-serif; font-weight:600; font-size:14px;">${escapeHtml(r.etiquetaVigente.nomeEtiqueta)}</div>
-            <div class="stamp" style="margin-top:8px;"><small>Lote recomendado</small>${escapeHtml(lote)}</div>
-          ` : (r.baseRow ? `<p class="field-hint" style="margin-top:8px;">Nenhuma etiqueta com Data Startup até ${escapeHtml(p.data)} foi encontrada para este código/país/distribuidor. Cadastre a Data de Startup na Base de Dados para gerar a etiqueta automaticamente.</p>` : '')}
-          ${expanded ? `
-            <div style="margin-top:14px; padding-top:12px; border-top:1px solid var(--border);">
-              <table class="mini-table">
-                <tbody>
-                  <tr><td>Cód.</td><td class="mono">${escapeHtml(it.sku)}</td></tr>
-                  <tr><td>Produto</td><td>${escapeHtml(it.produto) || '—'}</td></tr>
-                  <tr><td>Qnt. CX</td><td>${escapeHtml(it.qntCx) || '—'}</td></tr>
-                  <tr><td>Qnt. ETIQ.</td><td>${escapeHtml(it.qntEtiq) || '—'}</td></tr>
-                </tbody>
-              </table>
-            </div>
-          ` : `<div class="field-hint" style="margin-top:10px;">Clique para ver Cód., Produto, Qnt. CX e Qnt. ETIQ.</div>`}
-        </div>
-      `;}).join('')}
+      <h4 style="font-size:12px; color:var(--ink-faint); margin-bottom:10px;">Itens do pedido</h4>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>SKU</th>
+              <th>Nome do Produto</th>
+              <th>Etiqueta</th>
+              <th>Lote Recomendado</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.map(r=>`
+              <tr>
+                <td class="sku-cell">${escapeHtml(r.sku)}</td>
+                <td>${r.baseRow ? (r.nomeProduto ? escapeHtml(r.nomeProduto) : '—') : 'SKU não encontrado na base'}</td>
+                <td>${r.etiquetaVigente ? escapeHtml(r.etiquetaVigente.nomeEtiqueta) : (r.baseRow ? 'Sem etiqueta vigente' : '—')}</td>
+                <td>${r.etiquetaVigente ? `<span class="stamp" style="font-size:13px; padding:4px 11px;"><small>Lote</small>${escapeHtml(r.lote)}</span>` : '—'}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
     </div>
   `;
 }
@@ -1301,9 +1290,9 @@ function openPedidoModal(){
       </div>
     </div>
     <div class="field">
-      <label>Itens do pedido</label>
-      <textarea id="f-skus" rows="6" placeholder="Cole aqui: Cód. / Produto / Qnt. CX / Qnt. ETIQ. (colado direto de uma planilha) — ou apenas os códigos, um por linha"></textarea>
-      <div class="field-hint">Só entram na lista linhas com um código de 6 dígitos ou mais — o resto (cabeçalho, texto solto) é ignorado automaticamente. Produto, Qnt. CX e Qnt. ETIQ. ficam só de referência no card do pedido; apenas o código é usado para achar a etiqueta e o lote.</div>
+      <label>SKUs</label>
+      <textarea id="f-skus" rows="6" placeholder="Cole ou digite os SKUs — um por linha, ou separados por vírgula/tab (ex: colar de uma planilha)"></textarea>
+      <div class="field-hint">Só o código do SKU é considerado (6 dígitos ou mais) — qualquer outra coisa colada junto (nome de produto, quantidade, cabeçalho) é ignorada automaticamente.</div>
       <div class="chip-list" id="sku-chips"></div>
     </div>
   `;
@@ -1319,11 +1308,11 @@ function openPedidoModal(){
         $('#f-distribuidor').innerHTML = `<option value="">Nenhum</option>` + dists.map(d=>`<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join('');
       };
       const updateChips = ()=>{
-        const itens = parsePedidoPaste($('#f-skus').value);
+        const skus = parseSkuPaste($('#f-skus').value);
         const box = $('#sku-chips');
-        box.innerHTML = itens.map(it=>{
-          const found = baseData.some(r=>r.sku===it.sku);
-          return `<span class="chip ${found?'ok':'bad'}">${escapeHtml(it.sku)}${found?'':' ⚠'}</span>`;
+        box.innerHTML = skus.map(s=>{
+          const found = baseData.some(r=>r.sku===s);
+          return `<span class="chip ${found?'ok':'bad'}">${escapeHtml(s)}${found?'':' ⚠'}</span>`;
         }).join('');
       };
       $('#f-skus').addEventListener('input', updateChips);
@@ -1333,13 +1322,13 @@ function openPedidoModal(){
         const data = $('#f-data').value;
         const pais = $('#f-pais').value;
         const distribuidor = $('#f-distribuidor').value;
-        const itens = parsePedidoPaste($('#f-skus').value);
+        const skus = parseSkuPaste($('#f-skus').value);
         if(!numero){ toast('Informe o número do pedido.'); return; }
         if(!data){ toast('Informe a data do pedido.'); return; }
         if(!pais){ toast('Selecione o país.'); return; }
-        if(!itens.length){ toast('Informe ao menos um item com código de 6 dígitos ou mais.'); return; }
+        if(!skus.length){ toast('Informe ao menos um SKU válido (6 dígitos ou mais).'); return; }
         if(totalRecords() >= 999){ toast('Limite de 999 registros atingido.'); return; }
-        pedidos.push({id:uid('ped'), type:'pedido', numero, data, pais, distribuidor: distribuidor||null, itens, criadoEm:new Date().toISOString()});
+        pedidos.push({id:uid('ped'), type:'pedido', numero, data, pais, distribuidor: distribuidor||null, skus, criadoEm:new Date().toISOString()});
         await savePedidos();
         closeModal();
         pedidosView = {mode:'list', pedidoId:null};
@@ -1348,6 +1337,28 @@ function openPedidoModal(){
       };
     }
   });
+}
+
+/* =========================================================================
+   EXPORTAÇÃO EXCEL DO PEDIDO
+   ========================================================================= */
+function exportPedidoExcel(p){
+  if(typeof XLSX === 'undefined'){
+    toast('Não foi possível carregar o gerador de Excel. Verifique sua conexão e tente novamente.');
+    return;
+  }
+  const rows = buildPedidoRows(p);
+  const data = rows.map(r=>({
+    'SKU': r.sku,
+    'Nome do Produto': r.nomeProduto || '—',
+    'Etiqueta': r.etiquetaVigente ? r.etiquetaVigente.nomeEtiqueta : 'Sem etiqueta vigente',
+    'Lote Recomendado': r.lote || '—'
+  }));
+  const ws = XLSX.utils.json_to_sheet(data);
+  ws['!cols'] = [{wch:14},{wch:46},{wch:46},{wch:16}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Pedido');
+  XLSX.writeFile(wb, `Pedido_${(p.numero||'sem_numero').replace(/[^\w-]+/g,'_')}.xlsx`);
 }
 
 /* =========================================================================
@@ -1369,6 +1380,24 @@ function openModal({title, bodyHtml, footHtml, onMount}){
   if(onMount) onMount();
 }
 function closeModal(){ $('#modal-root').innerHTML = ''; }
+
+// Substitui o confirm() nativo do navegador — que pode ser bloqueado
+// silenciosamente em ambientes de iframe restrito (ex: apps embedados),
+// fazendo o botão "não fazer nada" sem aviso nenhum. Este modal é 100%
+// nosso, então funciona em qualquer ambiente.
+function confirmModal(message){
+  return new Promise(resolve=>{
+    openModal({
+      title:'Confirmar ação',
+      bodyHtml:`<p style="margin:0; font-size:14px; color:var(--ink); line-height:1.5;">${escapeHtml(message)}</p>`,
+      footHtml:`<button class="btn secondary" id="confirm-cancel">Cancelar</button><button class="btn warn" id="confirm-ok">Confirmar</button>`,
+      onMount:()=>{
+        $('#confirm-cancel').onclick = ()=>{ closeModal(); resolve(false); };
+        $('#confirm-ok').onclick = ()=>{ closeModal(); resolve(true); };
+      }
+    });
+  });
+}
 
 /* =========================================================================
    RENDER PRINCIPAL + EVENTOS
@@ -1420,6 +1449,11 @@ function bindTabEvents(){
   }
   if(activeTab==='etiquetas'){
     const syncTopBtn = $('#btn-sync-etiquetas-top'); if(syncTopBtn) syncTopBtn.onclick = ()=> runSync(true);
+    const toggleFiltrosBtn = $('#btn-toggle-filtros-etq');
+    if(toggleFiltrosBtn) toggleFiltrosBtn.onclick = ()=>{
+      etiquetaFiltrosVisiveis = !etiquetaFiltrosVisiveis;
+      render();
+    };
     $$('[data-etq-filter]').forEach(el=> el.onchange = ()=>{
       etiquetaFiltros[el.dataset.etqFilter] = el.value;
       render();
@@ -1460,7 +1494,7 @@ function bindTabEvents(){
       openEtiquetaModal(e);
     });
     $$('.btn-delete-etiqueta').forEach(b=> b.onclick = async ()=>{
-      if(!confirm('Excluir esta etiqueta?')) return;
+      if(!(await confirmModal('Excluir esta etiqueta?'))) return;
       const e = etiquetas.find(x=>x.id===b.dataset.id);
       if(e && e.source==='auto' && e.autoKey){
         suppressedAuto[e.autoKey] = e.dataStartup;
@@ -1473,25 +1507,23 @@ function bindTabEvents(){
   if(activeTab==='pedidos'){
     const novoBtn = $('#btn-novo-pedido'); if(novoBtn) novoBtn.onclick = openPedidoModal;
     $$('[data-open-pedido]').forEach(el=> el.onclick = ()=>{
-      pedidosView = {mode:'detail', pedidoId: el.dataset.openPedido, expandedItems:new Set()};
+      pedidosView = {mode:'detail', pedidoId: el.dataset.openPedido};
       render();
     });
-    $$('[data-toggle-item]').forEach(el=> el.onclick = ()=>{
-      const idx = parseInt(el.dataset.toggleItem, 10);
-      if(!pedidosView.expandedItems) pedidosView.expandedItems = new Set();
-      if(pedidosView.expandedItems.has(idx)) pedidosView.expandedItems.delete(idx);
-      else pedidosView.expandedItems.add(idx);
-      render();
-    });
-    const backBtn = $('#btn-back-pedidos'); if(backBtn) backBtn.onclick = ()=>{ pedidosView = {mode:'list', pedidoId:null, expandedItems:new Set()}; render(); };
+    const backBtn = $('#btn-back-pedidos'); if(backBtn) backBtn.onclick = ()=>{ pedidosView = {mode:'list', pedidoId:null}; render(); };
     const delPedBtn = $('#btn-delete-pedido');
     if(delPedBtn) delPedBtn.onclick = async ()=>{
-      if(!confirm('Excluir este pedido?')) return;
+      if(!(await confirmModal('Excluir este pedido?'))) return;
       pedidos = pedidos.filter(p=>p.id!==delPedBtn.dataset.id);
       await savePedidos();
-      pedidosView = {mode:'list', pedidoId:null, expandedItems:new Set()};
+      pedidosView = {mode:'list', pedidoId:null};
       render();
       toast('Pedido excluído.');
+    };
+    const excelBtn = $('#btn-excel-pedido');
+    if(excelBtn) excelBtn.onclick = ()=>{
+      const p = pedidos.find(x=>x.id===excelBtn.dataset.id);
+      if(p) exportPedidoExcel(p);
     };
   }
 }
@@ -1500,7 +1532,7 @@ $$('.tab-btn').forEach(b=> b.onclick = ()=>{ activeTab = b.dataset.tab; render()
 
 $('#btn-excluir-tudo').onclick = async ()=>{
   if(totalRecords()===0){ toast('Não há etiquetas ou pedidos para excluir.'); return; }
-  if(!confirm('Isso vai excluir TODAS as etiquetas e TODOS os pedidos (a Base de Dados não será afetada). Confirmar?')) return;
+  if(!(await confirmModal('Isso vai excluir TODAS as etiquetas e TODOS os pedidos (a Base de Dados não será afetada). Confirmar?'))) return;
   etiquetas = [];
   pedidos = [];
   suppressedAuto = {};
@@ -1521,7 +1553,8 @@ async function boot(){
 
 boot();
 </script>
-  <script type="module">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
 import {
   getAuth,

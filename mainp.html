@@ -255,20 +255,7 @@ tbody tr:last-child td{border-bottom:none;}
 </style>
 </head>
 <body>
-
-<div class="login-screen" id="login-screen">
-  <div class="login-card">
-    <div class="brand-mark">ETQ</div>
-    <h2>Controle de Etiquetas &amp; Lotes</h2>
-    <p>Acesse com seu e-mail e senha para continuar.</p>
-    <div id="login-error" class="login-error" style="display:none;"></div>
-    <div class="field"><label>E-mail</label><input type="email" id="login-email" placeholder="voce@empresa.com"></div>
-    <div class="field" style="margin-bottom:20px;"><label>Senha</label><input type="password" id="login-password" placeholder="••••••••"></div>
-    <button class="btn" id="btn-login" style="width:100%;">Entrar</button>
-  </div>
-</div>
-
-<div id="app-shell" style="display:none;">
+<div id="app-shell">
   <div class="topbar">
     <div class="brand">
       <div class="brand-mark">ETQ</div>
@@ -470,35 +457,11 @@ function toast(msg){
   setTimeout(()=>{ if(el.parentNode) el.parentNode.removeChild(el); }, 3200);
 }
 
-/* ---------- Login (apenas controla acesso a esta sessão do navegador) ---------- */
-function initLogin(){
-  const doLogin = async ()=>{
-    const email = $('#login-email').value.trim();
-    const pass = $('#login-password').value;
-    const err = $('#login-error');
-    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
-      err.textContent = 'Informe um e-mail válido.'; err.style.display='block'; return;
-    }
-    if(!pass || pass.length < 4){
-      err.textContent = 'Informe sua senha (mínimo 4 caracteres).'; err.style.display='block'; return;
-    }
-    err.style.display='none';
-    currentUser = email;
-    $('#login-screen').style.display='none';
-    $('#app-shell').style.display='block';
-    $('#user-pill').textContent = currentUser;
+/* ---------- Inicialização ---------- */
+window.addEventListener('load', async () => {
+    currentUser = "Usuário";
     await boot();
-  };
-  $('#btn-login').onclick = doLogin;
-  ['login-email','login-password'].forEach(id=>{
-    $('#'+id).addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
-  });
-  $('#btn-logout').onclick = ()=>{
-    $('#app-shell').style.display='none';
-    $('#login-screen').style.display='flex';
-    $('#login-password').value='';
-  };
-}
+});
 
 /* ---------- Persistência (window.storage) ---------- */
 async function loadAll(){
@@ -1417,66 +1380,7 @@ async function boot(){
   render();
 }
 
-initLogin();
+boot();
 </script>
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
-  import { 
-    getAuth, 
-    createUserWithEmailAndPassword, 
-    signInWithEmailAndPassword,
-    onAuthStateChanged
-  } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
-
-  const firebaseConfig = {
-    apiKey: "AIzaSyCTJyf-S1SFIQIG5l6y_EV06-dqnc6SxsQ",
-    authDomain: "controle-de-etiquetas-d8385.firebaseapp.com",
-    projectId: "controle-de-etiquetas-d8385",
-    storageBucket: "controle-de-etiquetas-d8385.firebasestorage.app",
-    messagingSenderId: "269761879207",
-    appId: "1:269761879207:web:653a30302ddef6c27dcf82"
-  };
-
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-
-  // 🔹 CADASTRO
-  window.cadastro = function () {
-    const email = document.getElementById("email").value;
-    const senha = document.getElementById("senha").value;
-
-    createUserWithEmailAndPassword(auth, email, senha)
-      .then(() => {
-        document.getElementById("status").innerText = "Conta criada com sucesso!";
-      })
-      .catch((error) => {
-        document.getElementById("status").innerText = error.message;
-      });
-  }
-
-  // 🔹 LOGIN
-  window.login = function () {
-    const email = document.getElementById("email").value;
-    const senha = document.getElementById("senha").value;
-
-    signInWithEmailAndPassword(auth, email, senha)
-      .then(() => {
-        document.getElementById("status").innerText = "Login OK!";
-
-        // 🔥 redireciona para sua página principal
-        window.location.href = "mainp.html";
-      })
-      .catch((error) => {
-        document.getElementById("status").innerText = error.message;
-      });
-  }
-
-  // 🔥 EXTRA: se já estiver logado, pula login automaticamente
-  onAuthStateChanged(auth, (user) => {
-    if (user) {
-      window.location.href = "mainp.html";
-    }
-  });
-</script>
-</body>
+  </body>
 </html>

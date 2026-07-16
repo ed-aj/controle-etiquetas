@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self';">
 <title>Controle de Etiquetas e Lotes</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -203,19 +205,6 @@ tbody tr:last-child td{border-bottom:none;}
 .helper-text{font-size:12.5px; color:var(--ink-soft); margin-bottom:16px; line-height:1.55;}
 </style>
 <script type="module">
-/* =========================================================================
-   GATE DE AUTENTICAÇÃO + BACKEND (FIRESTORE)
-   Este bloco roda antes de qualquer outro script. Enquanto o Firebase não
-   confirmar um usuário logado, o <body> fica com a classe "auth-pending"
-   (oculta #app-shell via CSS) e nenhum dado é buscado.
-
-   Depois de confirmado o login:
-     1) remove a classe "auth-pending"
-     2) expõe window.fsGet / window.fsSet — funções que leem e gravam no
-        Firestore (coleção "appData"), protegidas pelas regras de
-        segurança do projeto (só usuário autenticado pode ler/escrever)
-     3) dispara "app:authenticated", liberando o boot() do app principal
-   ========================================================================= */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
 import {
   getAuth,
@@ -242,28 +231,27 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// Cada "chave" (baseData, etiquetas, pedidos, suppressedAuto) vira UM
-// documento na coleção appData, com o conteúdo inteiro no campo "payload".
-// Isso espelha o antigo esquema de localStorage (1 chave = 1 blob), só que
-// agora vive no servidor, atrás de autenticação — não mais no navegador.
-window.fsGet = async function(key){
-  const snap = await getDoc(doc(db, 'appData', key));
-  return snap.exists() ? snap.data().payload : null;
-};
-window.fsSet = async function(key, value){
-  await setDoc(doc(db, 'appData', key), {
-    payload: value,
-    atualizadoEm: new Date().toISOString()
-  });
-  return true;
+// Agrupadas num único objeto (em vez de duas funções soltas em window) para
+// reduzir a superfície exposta no escopo global.
+window.__appBackend = {
+  get: async function(key){
+    const snap = await getDoc(doc(db, 'appData', key));
+    return snap.exists() ? snap.data().payload : null;
+  },
+  set: async function(key, value){
+    await setDoc(doc(db, 'appData', key), {
+      payload: value,
+      atualizadoEm: new Date().toISOString()
+    });
+    return true;
+  }
 };
 
 onAuthStateChanged(auth, (user) => {
   if (!user) {
-    window.location.replace("index.html");
+    window.location.replace("login.html");
     return;
   }
-  console.log("Usuário autenticado:", user.email);
   document.body.classList.remove('auth-pending');
   window.dispatchEvent(new Event('app:authenticated'));
 });
@@ -271,12 +259,29 @@ onAuthStateChanged(auth, (user) => {
 window.logout = function(){
   signOut(auth)
     .then(() => {
-      window.location.replace("index.html");
+      window.location.replace("login.html");
     })
     .catch((error)=>{
       console.error(error);
     });
 };
+</script>
+<script>
+// Defesa contra Clickjacking: como o GitHub Pages não permite configurar o
+// cabeçalho HTTP X-Frame-Options (e o CSP acima, por vir via <meta> e não
+// via cabeçalho HTTP, não pode aplicar "frame-ancestors"), a alternativa
+// possível dentro de um HTML estático é bloquear via JS: se a página for
+// carregada dentro de um iframe de outra origem, ela para de renderizar.
+try{
+  if(window.top !== window.self){
+    document.documentElement.style.display = 'none';
+    window.top.location = window.self.location;
+  }
+}catch(e){
+  // Acesso a window.top bloqueado por cross-origin = quase certamente dentro
+  // de um iframe estranho. Mais seguro tratar como tentativa de clickjacking.
+  document.documentElement.style.display = 'none';
+}
 </script>
 </head>
 <body class="auth-pending">
@@ -310,17 +315,10 @@ window.logout = function(){
 <div id="toast-root"></div>
 
 <script>
-/* =========================================================================
-   ESTADO GLOBAL
-   Os dados não são mais gerados a partir de SEED_ROWS embutido no arquivo.
-   Eles vêm inteiramente do Firestore (via window.fsGet), que precisa ser
-   populado uma vez usando o arquivo migrar-dados.html (uso único, não fica
-   publicado permanentemente).
-   ========================================================================= */
 let baseData = [];
 let etiquetas = [];
 let pedidos = [];
-let suppressedAuto = {}; // autoKey -> dataStartup no momento em que o usuário excluiu manualmente
+let suppressedAuto = {};
 let activeTab = 'db';
 let etiquetaNav = {level:1, productKey:null, pais:null, distribuidor:null};
 let etiquetaFiltros = {pais:'', projeto:'', sku:'', marca:'', submarca:'', versao:'', embalagem:'', peso:'', distribuidor:''};
@@ -349,20 +347,40 @@ window.addEventListener('app:authenticated', async () => {
     await boot();
 }, { once: true });
 
-/* ---------- Persistência (Firestore) ---------- */
 async function loadAll(){
-  try{ baseData = (await window.fsGet('baseData')) || []; }catch(e){ baseData = []; toast('Erro ao carregar Base de Dados.'); }
-  try{ etiquetas = (await window.fsGet('etiquetas')) || []; }catch(e){ etiquetas = []; }
-  try{ pedidos = (await window.fsGet('pedidos')) || []; }catch(e){ pedidos = []; }
-  try{ suppressedAuto = (await window.fsGet('suppressedAuto')) || {}; }catch(e){ suppressedAuto = {}; }
+  try{ baseData = (await window.__appBackend.get('baseData')) || []; }catch(e){ baseData = []; handleDataError(e, 'Erro ao carregar a Base de Dados.'); }
+  try{ etiquetas = (await window.__appBackend.get('etiquetas')) || []; }catch(e){ etiquetas = []; handleDataError(e, 'Erro ao carregar as Etiquetas.'); }
+  try{ pedidos = (await window.__appBackend.get('pedidos')) || []; }catch(e){ pedidos = []; handleDataError(e, 'Erro ao carregar os Pedidos.'); }
+  try{ suppressedAuto = (await window.__appBackend.get('suppressedAuto')) || {}; }catch(e){ suppressedAuto = {}; }
+}
+
+// Trata falhas de leitura/escrita sem expor detalhes internos da exceção ao usuário.
+// Se o erro for de permissão (sessão expirada, token revogado, regras do Firestore),
+// força o logout em vez de deixar a tela num estado inconsistente.
+function handleDataError(e, mensagemGenerica){
+  const code = e && e.code ? String(e.code) : '';
+  if(code.includes('permission-denied') || code.includes('unauthenticated')){
+    toast('Sua sessão expirou ou não tem mais permissão de acesso. Saindo...');
+    setTimeout(()=>{ if(typeof window.logout === 'function') window.logout(); }, 1500);
+    return;
+  }
+  toast(mensagemGenerica);
 }
 
 async function safeSet(key, value){
   try{
-    await window.fsSet(key, value);
+    const json = JSON.stringify(value);
+    // Guarda defensiva no cliente: o Firestore recusa documentos > 1MB.
+    // Isso não substitui validação no servidor (Regras do Firestore) —
+    // é só para dar um aviso claro antes de tentar gravar algo grande demais.
+    if(json && json.length > 900000){
+      toast('Esse conjunto de dados ficou grande demais para salvar de uma vez. Fale com o suporte técnico.');
+      return false;
+    }
+    await window.__appBackend.set(key, value);
     return true;
   }catch(e){
-    toast('Erro ao salvar: '+(e && e.message ? e.message : 'desconhecido'));
+    handleDataError(e, 'Não foi possível salvar. Tente novamente.');
     return false;
   }
 }
@@ -372,9 +390,6 @@ async function saveEtiquetas(){ await safeSet('etiquetas', etiquetas); }
 async function savePedidos(){ await safeSet('pedidos', pedidos); }
 async function saveSuppressed(){ await safeSet('suppressedAuto', suppressedAuto); }
 
-/* =========================================================================
-   REGRAS DE NEGÓCIO — LOTE E VIGÊNCIA
-   ========================================================================= */
 function dayOfYear(d){
   const start = new Date(d.getFullYear(),0,1);
   return Math.floor((d - start) / 86400000) + 1;
@@ -508,9 +523,6 @@ function loteRecomendado(e, status){
   return calcLote(TODAY);
 }
 
-/* =========================================================================
-   SINCRONIZAÇÃO AUTOMÁTICA: BASE DE DADOS -> ETIQUETAS
-   ========================================================================= */
 function syncEtiquetasFromBaseData(){
   let created=0, updated=0, removed=0;
   const validAutoKeys = new Set();
@@ -554,9 +566,6 @@ function syncEtiquetasFromBaseData(){
   return {created, updated, removed};
 }
 
-/* =========================================================================
-   PARSER CSV/TSV (para importação da Base de Dados)
-   ========================================================================= */
 function parseDelimited(text){
   const delim = (text.split('\n')[0].split('\t').length > text.split('\n')[0].split(',').length) ? '\t' : ',';
   const rows = [];
@@ -612,9 +621,6 @@ function importRowsToDatabase(rows){
   return {added, updated, unchanged};
 }
 
-/* =========================================================================
-   RENDER: ABA BASE DE DADOS
-   ========================================================================= */
 function filteredBaseData(){
   if(!dbFilter) return baseData;
   const f = dbFilter.toLowerCase();
@@ -741,9 +747,6 @@ function openDbRowModal(id){
   });
 }
 
-/* =========================================================================
-   RENDER: ABA ETIQUETAS (drill-down)
-   ========================================================================= */
 function renderCrumbs(){
   const items = [{label:'Produtos', level:1}];
   if(etiquetaNav.productKey){
@@ -803,7 +806,7 @@ function renderLevel1(){
   }
   return `<div class="grid">${products.map(p=>{
     const countries = new Set(p.rows.map(r=>r.pais)).size;
-    return `<button class="pick-card" data-pick-product="${p.key}">
+    return `<button class="pick-card" data-pick-product="${escapeHtml(p.key)}">
       <div class="pc-eyebrow">SKU ${escapeHtml(p.sku)}</div>
       <div class="pc-title">${escapeHtml(productDisplayName(p))}</div>
       <div class="pc-meta"><span class="tag blue">${countries} país${countries!==1?'es':''}</span></div>
@@ -1005,9 +1008,6 @@ function openEtiquetaModal(existing){
   });
 }
 
-/* =========================================================================
-   RENDER: ABA PEDIDOS
-   ========================================================================= */
 function parseSkuPaste(text){
   const tokens = text.split(/[\r\n\t,;]+/).map(s=>s.trim());
   const skus = [];
@@ -1185,9 +1185,15 @@ function openPedidoModal(){
   });
 }
 
-/* =========================================================================
-   EXPORTAÇÃO EXCEL DO PEDIDO
-   ========================================================================= */
+// Neutraliza "Injeção de Fórmula" (CSV/Excel Formula Injection): se algum valor
+// vindo da Base de Dados começar com =, +, -, @ (ou tab/CR), o Excel pode
+// interpretá-lo como fórmula ao abrir o arquivo. Prefixamos com um apóstrofo
+// para forçar leitura como texto puro.
+function sanitizeForExcel(value){
+  const s = String(value == null ? '' : value);
+  return /^[=+\-@\t\r]/.test(s) ? "'" + s : s;
+}
+
 function exportPedidoExcel(p){
   if(typeof XLSX === 'undefined'){
     toast('Não foi possível carregar o gerador de Excel. Verifique sua conexão e tente novamente.');
@@ -1195,10 +1201,10 @@ function exportPedidoExcel(p){
   }
   const rows = buildPedidoRows(p);
   const data = rows.map(r=>({
-    'SKU': r.sku,
-    'Nome do Produto': r.nomeProduto || '—',
-    'Etiqueta': r.etiquetaVigente ? r.etiquetaVigente.nomeEtiqueta : 'Sem etiqueta vigente',
-    'Lote Recomendado': r.lote || '—'
+    'SKU': sanitizeForExcel(r.sku),
+    'Nome do Produto': sanitizeForExcel(r.nomeProduto || '—'),
+    'Etiqueta': sanitizeForExcel(r.etiquetaVigente ? r.etiquetaVigente.nomeEtiqueta : 'Sem etiqueta vigente'),
+    'Lote Recomendado': sanitizeForExcel(r.lote || '—')
   }));
   const ws = XLSX.utils.json_to_sheet(data);
   ws['!cols'] = [{wch:14},{wch:46},{wch:46},{wch:16}];
@@ -1207,9 +1213,6 @@ function exportPedidoExcel(p){
   XLSX.writeFile(wb, `Pedido_${(p.numero||'sem_numero').replace(/[^\w-]+/g,'_')}.xlsx`);
 }
 
-/* =========================================================================
-   MODAL GENÉRICO
-   ========================================================================= */
 function openModal({title, bodyHtml, footHtml, onMount}){
   const root = $('#modal-root');
   root.innerHTML = `
@@ -1241,14 +1244,6 @@ function confirmModal(message){
   });
 }
 
-/* =========================================================================
-   URL <-> ESTADO DE NAVEGAÇÃO
-   Cada aba/drill-down/pedido aberto vira um endereço diferente depois do
-   "#" (não precisa de configuração nenhuma no GitHub Pages, pois é só
-   fragmento de URL, não uma rota de servidor). Isso permite:
-   - favoritar/compartilhar o link de um produto, país ou pedido específico
-   - usar o botão Voltar/Avançar do navegador para navegar pelo histórico
-   ========================================================================= */
 function buildHashParams(){
   const params = new URLSearchParams();
   params.set('tab', activeTab);
@@ -1299,9 +1294,6 @@ window.addEventListener('popstate', ()=>{
   render();
 });
 
-/* =========================================================================
-   RENDER PRINCIPAL + EVENTOS
-   ========================================================================= */
 function render(){
   $('#record-count').textContent = totalRecords();
   $$('.tab-btn').forEach(b=> b.classList.toggle('active', b.dataset.tab===activeTab));
@@ -1336,13 +1328,39 @@ function bindTabEvents(){
     if(fileInput) fileInput.onchange = async (e)=>{
       const file = e.target.files[0];
       if(!file) return;
-      const text = await file.text();
-      const rows = parseDelimited(text);
-      const r = importRowsToDatabase(rows);
-      await saveBaseData();
-      const s = syncEtiquetasFromBaseData();
-      await saveEtiquetas();
-      await saveSuppressed();
+      const MAX_SIZE = 5 * 1024 * 1024; // 5MB — mais que suficiente para uma planilha de base de dados
+      const nomeOk = /\.(csv|tsv|txt)$/i.test(file.name);
+      if(!nomeOk){
+        toast('Formato de arquivo não suportado. Envie um .csv, .tsv ou .txt.');
+        fileInput.value = '';
+        return;
+      }
+      if(file.size > MAX_SIZE){
+        toast('Arquivo muito grande (limite de 5MB).');
+        fileInput.value = '';
+        return;
+      }
+      let text;
+      try{
+        text = await file.text();
+      }catch(err){
+        toast('Não foi possível ler o arquivo.');
+        fileInput.value = '';
+        return;
+      }
+      let r, s;
+      try{
+        const rows = parseDelimited(text);
+        r = importRowsToDatabase(rows);
+        await saveBaseData();
+        s = syncEtiquetasFromBaseData();
+        await saveEtiquetas();
+        await saveSuppressed();
+      }catch(err){
+        toast('Não foi possível processar o arquivo. Confira o formato e tente novamente.');
+        fileInput.value = '';
+        return;
+      }
       fileInput.value = '';
       render();
       toast(`Base: ${r.added} novo(s), ${r.updated} atualizado(s), ${r.unchanged} sem alteração. Etiquetas: ${s.created} nova(s), ${s.updated} atualizada(s), ${s.removed} removida(s).`);
@@ -1453,6 +1471,6 @@ async function boot(){
   render();
 }
 </script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 </body>
 </html>

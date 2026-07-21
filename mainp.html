@@ -325,7 +325,11 @@ let etiquetaNav = {level:1, productKey:null, pais:null, distribuidor:null};
 let etiquetaFiltros = {pais:'', projeto:'', sku:'', marca:'', submarca:'', versao:'', embalagem:'', peso:'', distribuidor:''};
 let etiquetaFiltrosVisiveis = false;
 let registroNav = {level:1, productKey:null, pais:null};
+let registroFiltros = {pais:'', projeto:'', sku:'', marca:'', submarca:'', versao:'', embalagem:'', peso:'', distribuidor:'', status:''};
+let registroFiltrosVisiveis = false;
 let dbFilter = '';
+let dbColumnFiltros = {pais:'', projeto:'', sku:'', marca:'', submarca:'', versao:'', embalagem:'', peso:'', distribuidor:''};
+let dbFiltrosVisiveis = false;
 let pedidosView = {mode:'list', pedidoId:null};
 const TODAY = new Date().toISOString().slice(0,10);
 
@@ -626,19 +630,112 @@ function importRowsToDatabase(rows){
 }
 
 function filteredBaseData(){
-  if(!dbFilter) return baseData;
-  const f = dbFilter.toLowerCase();
-  return baseData.filter(r => Object.values(r).some(v => String(v).toLowerCase().includes(f)));
+  let rows = baseData;
+  const f = dbColumnFiltros;
+  if(f.pais) rows = rows.filter(r=>r.pais===f.pais);
+  if(f.projeto) rows = rows.filter(r=>r.projeto===f.projeto);
+  if(f.sku) rows = rows.filter(r=>r.sku===f.sku);
+  if(f.marca) rows = rows.filter(r=>r.marca===f.marca);
+  if(f.submarca) rows = rows.filter(r=>r.submarca===f.submarca);
+  if(f.versao) rows = rows.filter(r=>r.versao===f.versao);
+  if(f.embalagem) rows = rows.filter(r=>r.embalagem===f.embalagem);
+  if(f.peso) rows = rows.filter(r=>r.peso===f.peso);
+  if(f.distribuidor) rows = rows.filter(r=>r.distribuidor===f.distribuidor);
+  if(dbFilter.trim()){
+    // Busca por várias palavras ao mesmo tempo: cada palavra digitada precisa
+    // aparecer em algum campo do registro (não precisa ser no mesmo campo).
+    const termos = dbFilter.toLowerCase().split(/\s+/).filter(Boolean);
+    rows = rows.filter(r=>{
+      const texto = Object.values(r).join(' ').toLowerCase();
+      return termos.every(t=> texto.includes(t));
+    });
+  }
+  return rows;
+}
+
+function renderDbFiltrosBar(){
+  const fields = [
+    {key:'pais', label:'País'},
+    {key:'projeto', label:'Projeto'},
+    {key:'sku', label:'SKU'},
+    {key:'marca', label:'Marca'},
+    {key:'submarca', label:'Submarca'},
+    {key:'versao', label:'Versão'},
+    {key:'embalagem', label:'Embalagem'},
+    {key:'peso', label:'Peso'},
+    {key:'distribuidor', label:'Distribuidor'}
+  ];
+  const anyActive = Object.values(dbColumnFiltros).some(v=>v);
+  return `
+    <div class="filters-bar">
+      <div class="filters-grid">
+        ${fields.map(f=>{
+          const opts = uniqueFieldValues(f.key);
+          return `
+          <div class="field" style="margin-bottom:0;">
+            <label>${escapeHtml(f.label)}</label>
+            <select data-db-filter="${f.key}">
+              <option value="">Todos</option>
+              ${opts.map(v=>`<option value="${escapeHtml(v)}" ${dbColumnFiltros[f.key]===v?'selected':''}>${escapeHtml(v)}</option>`).join('')}
+            </select>
+          </div>`;
+        }).join('')}
+      </div>
+      ${anyActive ? `<button class="btn secondary small" id="btn-limpar-filtros-db" style="margin-top:12px;">Limpar filtros</button>` : ''}
+    </div>
+  `;
+}
+
+// Só o resultado (contagem + barra de filtros + tabela) é reconstruído a cada
+// busca/filtro — o campo de busca em si (renderDbTab) nunca é tocado, então
+// ele nunca perde o foco nem a posição do cursor, não importa quantas vezes
+// o resultado seja atualizado.
+function renderDbResults(){
+  const rows = filteredBaseData();
+  const anyActive = Object.values(dbColumnFiltros).some(v=>v);
+  return `
+    <div class="toolbar" style="margin-bottom:16px;">
+      <div class="toolbar-left">
+        <button class="btn secondary small" id="btn-toggle-filtros-db">${dbFiltrosVisiveis ? 'Ocultar filtros' : 'Filtros'}${anyActive ? ' •' : ''}</button>
+        <span class="count-pill">${rows.length} de ${baseData.length} registros</span>
+      </div>
+    </div>
+    ${dbFiltrosVisiveis ? renderDbFiltrosBar() : ''}
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>Código</th><th>País</th><th>Projeto</th><th>SKU</th><th>Marca</th><th>Submarca</th>
+          <th>Versão</th><th>Embalagem</th><th>Peso</th><th>Distribuidor</th><th>Startup</th><th></th>
+        </tr></thead>
+        <tbody>
+          ${rows.length===0 ? `<tr><td colspan="12"><div class="empty-state" style="border:none; padding:20px 0;">Nenhum registro encontrado. Se esta é a primeira vez que o app roda com o novo backend, use o arquivo de migração para importar os dados iniciais, ou clique em "+ Novo registro" / "Importar CSV/TSV".</div></td></tr>` :
+            rows.map(r=>`
+            <tr data-id="${r.id}">
+              <td class="mono">${escapeHtml(r.codigo)}</td>
+              <td>${escapeHtml(r.pais)}</td>
+              <td>${escapeHtml(r.projeto)}</td>
+              <td class="sku-cell">${escapeHtml(r.sku)}</td>
+              <td>${escapeHtml(r.marca)}</td>
+              <td>${escapeHtml(r.submarca)}</td>
+              <td>${escapeHtml(r.versao)}</td>
+              <td>${escapeHtml(r.embalagem)}</td>
+              <td>${escapeHtml(r.peso)}</td>
+              <td>${escapeHtml(r.distribuidor)}</td>
+              <td class="mono">${escapeHtml(r.startup)||'—'}</td>
+              <td><button class="btn secondary small btn-edit-row" data-id="${r.id}">Editar</button></td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
 }
 
 function renderDbTab(){
-  const rows = filteredBaseData();
   return `
     <div class="panel">
       <div class="toolbar">
         <div class="toolbar-left">
-          <input type="text" class="search-input" id="db-search" placeholder="Buscar em qualquer campo..." value="${escapeHtml(dbFilter)}">
-          <span class="count-pill">${rows.length} de ${baseData.length} registros</span>
+          <input type="text" class="search-input" id="db-search" placeholder="Buscar em qualquer campo... (pode digitar várias palavras)" value="${escapeHtml(dbFilter)}" autocomplete="off">
         </div>
         <div class="toolbar-left">
           <button class="btn secondary small" id="btn-import-csv">Importar CSV/TSV</button>
@@ -647,32 +744,7 @@ function renderDbTab(){
         </div>
       </div>
       <p class="helper-text">Ao importar um arquivo, os registros existentes (mesma combinação Código + Projeto + SKU) são atualizados apenas se algo mudou; o restante da base permanece intacto. As etiquetas são recalculadas automaticamente logo em seguida.</p>
-      <div class="table-wrap">
-        <table>
-          <thead><tr>
-            <th>Código</th><th>País</th><th>Projeto</th><th>SKU</th><th>Marca</th><th>Submarca</th>
-            <th>Versão</th><th>Embalagem</th><th>Peso</th><th>Distribuidor</th><th>Startup</th><th></th>
-          </tr></thead>
-          <tbody>
-            ${rows.length===0 ? `<tr><td colspan="12"><div class="empty-state" style="border:none; padding:20px 0;">Nenhum registro encontrado. Se esta é a primeira vez que o app roda com o novo backend, use o arquivo de migração para importar os dados iniciais, ou clique em "+ Novo registro" / "Importar CSV/TSV".</div></td></tr>` :
-              rows.map(r=>`
-              <tr data-id="${r.id}">
-                <td class="mono">${escapeHtml(r.codigo)}</td>
-                <td>${escapeHtml(r.pais)}</td>
-                <td>${escapeHtml(r.projeto)}</td>
-                <td class="sku-cell">${escapeHtml(r.sku)}</td>
-                <td>${escapeHtml(r.marca)}</td>
-                <td>${escapeHtml(r.submarca)}</td>
-                <td>${escapeHtml(r.versao)}</td>
-                <td>${escapeHtml(r.embalagem)}</td>
-                <td>${escapeHtml(r.peso)}</td>
-                <td>${escapeHtml(r.distribuidor)}</td>
-                <td class="mono">${escapeHtml(r.startup)||'—'}</td>
-                <td><button class="btn secondary small btn-edit-row" data-id="${r.id}">Editar</button></td>
-              </tr>`).join('')}
-          </tbody>
-        </table>
-      </div>
+      <div id="db-results">${renderDbResults()}</div>
     </div>
   `;
 }
@@ -1041,6 +1113,80 @@ function registroStatus(reg){
   return reg.validade >= TODAY ? 'vigente' : 'vencido';
 }
 
+// Aplica os filtros por campo (País, Projeto, SKU, Marca, Submarca, Versão,
+// Embalagem, Peso, Distribuidor) + o filtro por status do registro (se o
+// produto tiver ao menos um país com aquele status).
+function applyRegistroFiltros(products){
+  const f = registroFiltros;
+  return products.filter(p=>{
+    if(f.marca && p.marca!==f.marca) return false;
+    if(f.submarca && p.submarca!==f.submarca) return false;
+    if(f.versao && p.versao!==f.versao) return false;
+    if(f.embalagem && p.embalagem!==f.embalagem) return false;
+    if(f.peso && p.peso!==f.peso) return false;
+    if(f.sku && p.sku!==f.sku) return false;
+    if(f.pais && !p.rows.some(r=>r.pais===f.pais)) return false;
+    if(f.projeto && !p.rows.some(r=>r.projeto===f.projeto)) return false;
+    if(f.distribuidor && !p.rows.some(r=>(r.distribuidor||'')===f.distribuidor)) return false;
+    if(f.status){
+      const paisesDoProduto = Array.from(new Set(p.rows.map(r=>r.pais)));
+      const algumBate = paisesDoProduto.some(pais=>{
+        const reg = findRegistro(p.key, pais);
+        if(f.status==='sem') return !reg;
+        return registroStatus(reg) === f.status;
+      });
+      if(!algumBate) return false;
+    }
+    return true;
+  });
+}
+
+function renderRegistroFiltrosBar(){
+  const fields = [
+    {key:'pais', label:'País'},
+    {key:'projeto', label:'Projeto'},
+    {key:'sku', label:'SKU'},
+    {key:'marca', label:'Marca'},
+    {key:'submarca', label:'Submarca'},
+    {key:'versao', label:'Versão'},
+    {key:'embalagem', label:'Embalagem'},
+    {key:'peso', label:'Peso'},
+    {key:'distribuidor', label:'Distribuidor'}
+  ];
+  const anyActive = Object.values(registroFiltros).some(v=>v);
+  const total = groupProducts().length;
+  const filtrados = applyRegistroFiltros(groupProducts()).length;
+  return `
+    <div class="filters-bar">
+      <div class="filters-grid">
+        ${fields.map(f=>{
+          const opts = uniqueFieldValues(f.key);
+          return `
+          <div class="field" style="margin-bottom:0;">
+            <label>${escapeHtml(f.label)}</label>
+            <select data-registro-filter="${f.key}">
+              <option value="">Todos</option>
+              ${opts.map(v=>`<option value="${escapeHtml(v)}" ${registroFiltros[f.key]===v?'selected':''}>${escapeHtml(v)}</option>`).join('')}
+            </select>
+          </div>`;
+        }).join('')}
+        <div class="field" style="margin-bottom:0;">
+          <label>Status do registro</label>
+          <select data-registro-filter="status">
+            <option value="">Todos</option>
+            <option value="vigente" ${registroFiltros.status==='vigente'?'selected':''}>Vigente</option>
+            <option value="vencido" ${registroFiltros.status==='vencido'?'selected':''}>Vencido</option>
+            <option value="sem" ${registroFiltros.status==='sem'?'selected':''}>Sem registro</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-top:12px; display:flex; align-items:center; gap:10px;">
+        ${anyActive ? `<button class="btn secondary small" id="btn-limpar-filtros-registro">Limpar filtros</button><span class="count-pill">${filtrados} de ${total} produtos</span>` : ''}
+      </div>
+    </div>
+  `;
+}
+
 function renderRegistrosCrumbs(){
   const items = [{label:'Produtos', level:1}];
   if(registroNav.productKey){
@@ -1063,6 +1209,10 @@ function renderRegistrosTab(){
   if(registroNav.level===1) body = renderRegistroLevel1();
   else if(registroNav.level===2) body = renderRegistroLevel2();
   else if(registroNav.level===3) body = renderRegistroLevel3();
+  const anyActive = Object.values(registroFiltros).some(v=>v);
+  const filtrosBtnHtml = registroNav.level===1
+    ? `<button class="btn secondary small" id="btn-toggle-filtros-registro">${registroFiltrosVisiveis ? 'Ocultar filtros' : 'Filtros'}${anyActive ? ' •' : ''}</button>`
+    : '';
   return `
     <div class="panel">
       <div class="section-title">
@@ -1070,16 +1220,24 @@ function renderRegistrosTab(){
         <div class="rule"></div>
       </div>
       <p class="helper-text">Número de registro que autoriza vender o produto em cada país, com sua data de validade. Selecione produto → país para ver ou cadastrar.</p>
-      ${renderRegistrosCrumbs()}
+      <div class="crumbs-row">
+        ${renderRegistrosCrumbs()}
+        ${filtrosBtnHtml}
+      </div>
+      ${(registroNav.level===1 && registroFiltrosVisiveis) ? renderRegistroFiltrosBar() : ''}
       ${body}
     </div>
   `;
 }
 
 function renderRegistroLevel1(){
-  const products = groupProducts();
-  if(!products.length){
+  const allProducts = groupProducts();
+  if(!allProducts.length){
     return `<div class="empty-state"><h3>Nenhum produto na base</h3><p>Importe ou cadastre registros na aba Base de Dados para começar.</p></div>`;
+  }
+  const products = applyRegistroFiltros(allProducts);
+  if(!products.length){
+    return `<div class="empty-state"><h3>Nenhum produto encontrado</h3><p>Ajuste ou limpe os filtros acima.</p></div>`;
   }
   return `<div class="grid">${products.map(p=>{
     const countries = new Set(p.rows.map(r=>r.pais)).size;
@@ -1531,28 +1689,46 @@ async function runSync(showToast){
   return r;
 }
 
+// Atualiza só a área de resultados da Base de Dados (contagem, filtros,
+// tabela) sem tocar no campo de busca — usado a cada tecla digitada e a
+// cada mudança de filtro por coluna, pra nunca perder o foco do campo.
+function updateDbResults(){
+  const resultsEl = $('#db-results');
+  if(resultsEl) resultsEl.innerHTML = renderDbResults();
+  bindDbResultsEvents();
+}
+
+function bindDbResultsEvents(){
+  const toggleBtn = $('#btn-toggle-filtros-db');
+  if(toggleBtn) toggleBtn.onclick = ()=>{
+    dbFiltrosVisiveis = !dbFiltrosVisiveis;
+    updateDbResults();
+  };
+  $$('[data-db-filter]').forEach(el=> el.onchange = ()=>{
+    dbColumnFiltros[el.dataset.dbFilter] = el.value;
+    updateDbResults();
+  });
+  const limparBtn = $('#btn-limpar-filtros-db');
+  if(limparBtn) limparBtn.onclick = ()=>{
+    dbColumnFiltros = {pais:'', projeto:'', sku:'', marca:'', submarca:'', versao:'', embalagem:'', peso:'', distribuidor:''};
+    updateDbResults();
+  };
+  $$('.btn-edit-row').forEach(b=> b.onclick = ()=> openDbRowModal(b.dataset.id));
+}
+
 function bindTabEvents(){
   if(activeTab==='db'){
     const search = $('#db-search');
     if(search){
       search.oninput = ()=>{
-        const caretPos = search.selectionStart;
+        // Só o conteúdo de #db-results é reconstruído — o campo de busca em
+        // si nunca é destruído, então ele nunca perde o foco nem o cursor,
+        // não importa quantas vezes o resultado seja atualizado.
         dbFilter = search.value;
-        render();
-        // Depois do render(), o input antigo já foi removido do DOM (o innerHTML
-        // foi todo substituído) — por isso é preciso pegar a referência NOVA do
-        // campo pra devolver o foco e a posição do cursor. Focar no elemento
-        // antigo não tinha efeito nenhum, e era isso que fazia parecer que
-        // era preciso clicar de novo no campo a cada letra digitada.
-        const freshSearch = $('#db-search');
-        if(freshSearch){
-          freshSearch.focus();
-          freshSearch.setSelectionRange(caretPos, caretPos);
-        }
+        updateDbResults();
       };
     }
     const addBtn = $('#btn-add-row'); if(addBtn) addBtn.onclick = ()=> openDbRowModal(null);
-    $$('.btn-edit-row').forEach(b=> b.onclick = ()=> openDbRowModal(b.dataset.id));
     const importBtn = $('#btn-import-csv');
     const fileInput = $('#file-import');
     if(importBtn) importBtn.onclick = ()=> fileInput.click();
@@ -1596,6 +1772,7 @@ function bindTabEvents(){
       render();
       toast(`Base: ${r.added} novo(s), ${r.updated} atualizado(s), ${r.unchanged} sem alteração. Etiquetas: ${s.created} nova(s), ${s.updated} atualizada(s), ${s.removed} removida(s).`);
     };
+    bindDbResultsEvents();
   }
   if(activeTab==='etiquetas'){
     const syncTopBtn = $('#btn-sync-etiquetas-top'); if(syncTopBtn) syncTopBtn.onclick = ()=> runSync(true);
@@ -1655,6 +1832,20 @@ function bindTabEvents(){
     });
   }
   if(activeTab==='registros'){
+    const toggleFiltrosRegistroBtn = $('#btn-toggle-filtros-registro');
+    if(toggleFiltrosRegistroBtn) toggleFiltrosRegistroBtn.onclick = ()=>{
+      registroFiltrosVisiveis = !registroFiltrosVisiveis;
+      render();
+    };
+    $$('[data-registro-filter]').forEach(el=> el.onchange = ()=>{
+      registroFiltros[el.dataset.registroFilter] = el.value;
+      render();
+    });
+    const limparFiltrosRegistroBtn = $('#btn-limpar-filtros-registro');
+    if(limparFiltrosRegistroBtn) limparFiltrosRegistroBtn.onclick = ()=>{
+      registroFiltros = {pais:'', projeto:'', sku:'', marca:'', submarca:'', versao:'', embalagem:'', peso:'', distribuidor:'', status:''};
+      render();
+    };
     $$('[data-pick-registro-product]').forEach(el=> el.onclick = ()=>{
       registroNav = {level:2, productKey:el.dataset.pickRegistroProduct, pais:null};
       render();

@@ -299,12 +299,12 @@ try{
       Registros: <b id="record-count">0</b>/999
     </div>
     <button class="btn-danger-ghost" onclick="logout()">Sair</button>
-    <button class="btn-danger-ghost" id="btn-excluir-tudo">Excluir tudo</button>
   </div>
 </div>
 
 <div class="tabs">    <button class="tab-btn" data-tab="db">Base de Dados</button>
     <button class="tab-btn" data-tab="etiquetas">Etiquetas</button>
+    <button class="tab-btn" data-tab="registros">Registros</button>
     <button class="tab-btn" data-tab="pedidos">Pedidos</button>
   </div>
 
@@ -318,11 +318,13 @@ try{
 let baseData = [];
 let etiquetas = [];
 let pedidos = [];
+let registros = [];
 let suppressedAuto = {};
 let activeTab = 'db';
 let etiquetaNav = {level:1, productKey:null, pais:null, distribuidor:null};
 let etiquetaFiltros = {pais:'', projeto:'', sku:'', marca:'', submarca:'', versao:'', embalagem:'', peso:'', distribuidor:''};
 let etiquetaFiltrosVisiveis = false;
+let registroNav = {level:1, productKey:null, pais:null};
 let dbFilter = '';
 let pedidosView = {mode:'list', pedidoId:null};
 const TODAY = new Date().toISOString().slice(0,10);
@@ -333,7 +335,7 @@ const escapeHtml = s => String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;
 
 function uid(prefix){ return prefix+'_'+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
 
-function totalRecords(){ return etiquetas.length + pedidos.length; }
+function totalRecords(){ return etiquetas.length + pedidos.length + registros.length; }
 
 function toast(msg){
   const root = $('#toast-root');
@@ -351,6 +353,7 @@ async function loadAll(){
   try{ baseData = (await window.__appBackend.get('baseData')) || []; }catch(e){ baseData = []; handleDataError(e, 'Erro ao carregar a Base de Dados.'); }
   try{ etiquetas = (await window.__appBackend.get('etiquetas')) || []; }catch(e){ etiquetas = []; handleDataError(e, 'Erro ao carregar as Etiquetas.'); }
   try{ pedidos = (await window.__appBackend.get('pedidos')) || []; }catch(e){ pedidos = []; handleDataError(e, 'Erro ao carregar os Pedidos.'); }
+  try{ registros = (await window.__appBackend.get('registros')) || []; }catch(e){ registros = []; handleDataError(e, 'Erro ao carregar os Registros.'); }
   try{ suppressedAuto = (await window.__appBackend.get('suppressedAuto')) || {}; }catch(e){ suppressedAuto = {}; }
 }
 
@@ -388,6 +391,7 @@ async function safeSet(key, value){
 async function saveBaseData(){ await safeSet('baseData', baseData); }
 async function saveEtiquetas(){ await safeSet('etiquetas', etiquetas); }
 async function savePedidos(){ await safeSet('pedidos', pedidos); }
+async function saveRegistros(){ await safeSet('registros', registros); }
 async function saveSuppressed(){ await safeSet('suppressedAuto', suppressedAuto); }
 
 function dayOfYear(d){
@@ -894,6 +898,8 @@ function renderEtiquetaCard(e, status, isActive){
   const lote = loteRecomendado(e, status);
   const isFuture = e.dataStartup > TODAY;
   const statusLabel = isActive ? 'Vigente' : (isFuture ? 'Programada' : 'Histórico');
+  const reg = isActive ? findRegistro(e.productKey, e.pais) : null;
+  const regStatus = registroStatus(reg);
   return `
     <div class="etiqueta-final ${isActive?'':'inactive'}">
       <div class="ef-top">
@@ -910,6 +916,12 @@ function renderEtiquetaCard(e, status, isActive){
       </div>
       ${(isActive && status.next) ? `<div class="field-hint" style="margin-top:10px;">Próxima etiqueta programada para ${escapeHtml(status.next.dataStartup)} (${escapeHtml(status.next.nomeEtiqueta)}). O lote recomendado acima já considera o corte um dia antes desse startup.</div>` : ''}
       ${e.observacoes ? `<div class="ef-obs">"${escapeHtml(e.observacoes)}"</div>` : ''}
+      ${isActive ? `
+        <div class="ef-row" style="margin-top:2px; padding-top:12px; border-top:1px solid var(--border);">
+          <div><b>Registro no país</b>${reg ? escapeHtml(reg.numero)+' · válido até '+escapeHtml(reg.validade) : 'Não cadastrado'}</div>
+          ${regStatus ? `<div><b>Situação do registro</b><span class="ef-status ${regStatus==='vigente'?'on':'off'}" style="display:inline-block;">${regStatus==='vigente'?'Vigente':'Vencido'}</span></div>` : ''}
+        </div>
+      ` : ''}
       <div class="ef-actions">
         <button class="btn secondary small btn-edit-etiqueta" data-id="${e.id}">Editar</button>
         <button class="btn warn small btn-delete-etiqueta" data-id="${e.id}">Excluir</button>
@@ -1004,6 +1016,195 @@ function openEtiquetaModal(existing){
         closeModal(); render();
         toast('Etiqueta salva.');
       };
+    }
+  });
+}
+
+/* =========================================================================
+   RENDER: ABA REGISTROS (drill-down Produto -> País)
+   Registro = número que autoriza vender o produto naquele país (independe de
+   distribuidor), com uma data de validade. Ao contrário das Etiquetas, aqui
+   não existe histórico — é um valor único e editável por Produto+País; ao
+   editar, o valor anterior é substituído.
+   ========================================================================= */
+function registroKeyOf(productKey, pais){
+  return productKey+'::'+pais;
+}
+
+function findRegistro(productKey, pais){
+  return registros.find(r=> r.productKey===productKey && r.pais===pais) || null;
+}
+
+// Status do registro conforme a validade: 'vigente', 'vencido', ou null se não há data.
+function registroStatus(reg){
+  if(!reg || !reg.validade) return null;
+  return reg.validade >= TODAY ? 'vigente' : 'vencido';
+}
+
+function renderRegistrosCrumbs(){
+  const items = [{label:'Produtos', level:1}];
+  if(registroNav.productKey){
+    const p = groupProducts().find(g=>g.key===registroNav.productKey);
+    items.push({label: p ? productDisplayName(p) : 'Produto', level:2});
+  }
+  if(registroNav.pais){
+    items.push({label: registroNav.pais, level:3});
+  }
+  return `<div class="crumbs">${items.map((it,idx)=>`
+    ${idx>0?'<span class="crumb-sep">›</span>':''}
+    <span class="crumb ${idx===items.length-1?'active':''}">
+      <button class="crumb-btn" data-registro-crumb="${it.level}">${escapeHtml(it.label)}</button>
+    </span>
+  `).join('')}</div>`;
+}
+
+function renderRegistrosTab(){
+  let body = '';
+  if(registroNav.level===1) body = renderRegistroLevel1();
+  else if(registroNav.level===2) body = renderRegistroLevel2();
+  else if(registroNav.level===3) body = renderRegistroLevel3();
+  return `
+    <div class="panel">
+      <div class="section-title">
+        <h2>Registros</h2>
+        <div class="rule"></div>
+      </div>
+      <p class="helper-text">Número de registro que autoriza vender o produto em cada país, com sua data de validade. Selecione produto → país para ver ou cadastrar.</p>
+      ${renderRegistrosCrumbs()}
+      ${body}
+    </div>
+  `;
+}
+
+function renderRegistroLevel1(){
+  const products = groupProducts();
+  if(!products.length){
+    return `<div class="empty-state"><h3>Nenhum produto na base</h3><p>Importe ou cadastre registros na aba Base de Dados para começar.</p></div>`;
+  }
+  return `<div class="grid">${products.map(p=>{
+    const countries = new Set(p.rows.map(r=>r.pais)).size;
+    return `<button class="pick-card" data-pick-registro-product="${escapeHtml(p.key)}">
+      <div class="pc-eyebrow">SKU ${escapeHtml(p.sku)}</div>
+      <div class="pc-title">${escapeHtml(productDisplayName(p))}</div>
+      <div class="pc-meta"><span class="tag blue">${countries} país${countries!==1?'es':''}</span></div>
+    </button>`;
+  }).join('')}</div>`;
+}
+
+function renderRegistroLevel2(){
+  const p = groupProducts().find(g=>g.key===registroNav.productKey);
+  if(!p) return `<div class="empty-state"><h3>Produto não encontrado</h3></div>`;
+  const paises = Array.from(new Set(p.rows.map(r=>r.pais))).sort();
+  return `<div class="grid">${paises.map(pais=>{
+    const reg = findRegistro(registroNav.productKey, pais);
+    const status = registroStatus(reg);
+    let tagHtml = `<span class="tag">Sem registro</span>`;
+    if(status==='vigente') tagHtml = `<span class="tag accent">Vigente até ${escapeHtml(reg.validade)}</span>`;
+    else if(status==='vencido') tagHtml = `<span class="tag" style="background:var(--warn-soft); color:#c1202f; border-color:#f0c4c9;">Vencido em ${escapeHtml(reg.validade)}</span>`;
+    return `<button class="pick-card" data-pick-registro-pais="${escapeHtml(pais)}">
+      <div class="pc-eyebrow">País</div>
+      <div class="pc-title">${escapeHtml(pais)}</div>
+      <div class="pc-meta">${tagHtml}</div>
+    </button>`;
+  }).join('')}</div>`;
+}
+
+function renderRegistroLevel3(){
+  const p = groupProducts().find(g=>g.key===registroNav.productKey);
+  if(!p) return `<div class="empty-state"><h3>Produto não encontrado</h3></div>`;
+  const reg = findRegistro(registroNav.productKey, registroNav.pais);
+  const status = registroStatus(reg);
+
+  let html = `
+    <div class="section-title">
+      <h2>${escapeHtml(productDisplayName(p))} · ${escapeHtml(registroNav.pais)}</h2>
+      <div class="rule"></div>
+      <button class="btn small" id="btn-editar-registro">${reg ? 'Editar registro' : '+ Cadastrar registro'}</button>
+    </div>
+  `;
+
+  if(!reg){
+    html += `<div class="empty-state"><h3>Nenhum registro cadastrado</h3><p>Cadastre o número de registro e a data de validade para vender ${escapeHtml(p.sku)} em ${escapeHtml(registroNav.pais)}.</p></div>`;
+    return html;
+  }
+
+  html += `
+    <div class="etiqueta-final">
+      <div class="ef-top">
+        <div class="ef-name">${escapeHtml(reg.numero)}</div>
+        <div class="ef-status ${status==='vigente'?'on':'off'}">${status==='vigente'?'Vigente':'Vencido'}</div>
+      </div>
+      <div class="ef-row">
+        <div><b>Validade</b>${escapeHtml(reg.validade)}</div>
+        <div><b>País</b>${escapeHtml(registroNav.pais)}</div>
+        <div><b>SKU</b>${escapeHtml(p.sku)}</div>
+      </div>
+      ${reg.observacoes ? `<div class="ef-obs">"${escapeHtml(reg.observacoes)}"</div>` : ''}
+    </div>
+  `;
+  return html;
+}
+
+function openRegistroModal(){
+  const p = groupProducts().find(g=>g.key===registroNav.productKey);
+  const existing = findRegistro(registroNav.productKey, registroNav.pais);
+  const bodyHtml = `
+    <div class="field">
+      <label>Número de Registro</label>
+      <input id="f-registro-numero" value="${escapeHtml(existing ? existing.numero : '')}">
+    </div>
+    <div class="field">
+      <label>Validade</label>
+      <input type="date" id="f-registro-validade" value="${escapeHtml(existing ? existing.validade : '')}">
+      <div class="field-hint">Data até quando esse registro autoriza a venda do produto neste país.</div>
+    </div>
+    <div class="field">
+      <label>Observações</label>
+      <textarea id="f-registro-obs" rows="3">${escapeHtml(existing ? (existing.observacoes||'') : '')}</textarea>
+    </div>
+  `;
+  openModal({
+    title: existing ? 'Editar registro' : 'Cadastrar registro',
+    bodyHtml,
+    footHtml: `
+      ${existing ? '<button class="btn warn small" id="modal-delete-registro">Excluir</button>' : ''}
+      <button class="btn secondary" id="modal-cancel">Cancelar</button>
+      <button class="btn" id="modal-save">Salvar</button>
+    `,
+    onMount:()=>{
+      $('#modal-cancel').onclick = closeModal;
+      $('#modal-save').onclick = async ()=>{
+        const numero = $('#f-registro-numero').value.trim();
+        const validade = $('#f-registro-validade').value;
+        const observacoes = $('#f-registro-obs').value.trim();
+        if(!numero){ toast('Informe o número de registro.'); return; }
+        if(!validade){ toast('Informe a validade.'); return; }
+        if(existing){
+          existing.numero = numero;
+          existing.validade = validade;
+          existing.observacoes = observacoes;
+          existing.atualizadoEm = new Date().toISOString();
+        } else {
+          if(totalRecords() >= 999){ toast('Limite de 999 registros atingido.'); return; }
+          registros.push({
+            id: uid('reg'), productKey: registroNav.productKey, pais: registroNav.pais,
+            sku: p.sku, numero, validade, observacoes,
+            criadoEm: new Date().toISOString(), atualizadoEm: new Date().toISOString()
+          });
+        }
+        await saveRegistros();
+        closeModal(); render();
+        toast('Registro salvo.');
+      };
+      if(existing){
+        $('#modal-delete-registro').onclick = async ()=>{
+          if(!(await confirmModal('Excluir este registro?'))) return;
+          registros = registros.filter(r=>r.id!==existing.id);
+          await saveRegistros();
+          closeModal(); render();
+          toast('Registro excluído.');
+        };
+      }
     }
   });
 }
@@ -1253,6 +1454,11 @@ function buildHashParams(){
     if(etiquetaNav.pais) params.set('pais', etiquetaNav.pais);
     if(etiquetaNav.distribuidor) params.set('dist', etiquetaNav.distribuidor);
   }
+  if(activeTab==='registros'){
+    params.set('level', String(registroNav.level));
+    if(registroNav.productKey) params.set('product', registroNav.productKey);
+    if(registroNav.pais) params.set('pais', registroNav.pais);
+  }
   if(activeTab==='pedidos' && pedidosView.mode==='detail' && pedidosView.pedidoId){
     params.set('pedido', pedidosView.pedidoId);
   }
@@ -1269,7 +1475,7 @@ function syncUrlFromState(){
 function applyStateFromUrl(){
   const params = new URLSearchParams(location.hash.replace(/^#/, ''));
   const tab = params.get('tab');
-  if(tab && ['db','etiquetas','pedidos'].includes(tab)) activeTab = tab;
+  if(tab && ['db','etiquetas','registros','pedidos'].includes(tab)) activeTab = tab;
   if(activeTab==='etiquetas'){
     const level = parseInt(params.get('level')||'1', 10);
     etiquetaNav = {
@@ -1280,6 +1486,16 @@ function applyStateFromUrl(){
     };
   } else {
     etiquetaNav = {level:1, productKey:null, pais:null, distribuidor:null};
+  }
+  if(activeTab==='registros'){
+    const level = parseInt(params.get('level')||'1', 10);
+    registroNav = {
+      level: (level>=1 && level<=3) ? level : 1,
+      productKey: params.get('product') || null,
+      pais: params.get('pais') || null
+    };
+  } else {
+    registroNav = {level:1, productKey:null, pais:null};
   }
   if(activeTab==='pedidos'){
     const pedidoId = params.get('pedido');
@@ -1300,6 +1516,7 @@ function render(){
   const content = $('#tab-content');
   if(activeTab==='db') content.innerHTML = renderDbTab();
   else if(activeTab==='etiquetas') content.innerHTML = renderEtiquetasTab();
+  else if(activeTab==='registros') content.innerHTML = renderRegistrosTab();
   else if(activeTab==='pedidos') content.innerHTML = renderPedidosTab();
   bindTabEvents();
   syncUrlFromState();
@@ -1318,7 +1535,21 @@ function bindTabEvents(){
   if(activeTab==='db'){
     const search = $('#db-search');
     if(search){
-      search.oninput = ()=>{ dbFilter = search.value; render(); search.focus(); search.setSelectionRange(search.value.length, search.value.length); };
+      search.oninput = ()=>{
+        const caretPos = search.selectionStart;
+        dbFilter = search.value;
+        render();
+        // Depois do render(), o input antigo já foi removido do DOM (o innerHTML
+        // foi todo substituído) — por isso é preciso pegar a referência NOVA do
+        // campo pra devolver o foco e a posição do cursor. Focar no elemento
+        // antigo não tinha efeito nenhum, e era isso que fazia parecer que
+        // era preciso clicar de novo no campo a cada letra digitada.
+        const freshSearch = $('#db-search');
+        if(freshSearch){
+          freshSearch.focus();
+          freshSearch.setSelectionRange(caretPos, caretPos);
+        }
+      };
     }
     const addBtn = $('#btn-add-row'); if(addBtn) addBtn.onclick = ()=> openDbRowModal(null);
     $$('.btn-edit-row').forEach(b=> b.onclick = ()=> openDbRowModal(b.dataset.id));
@@ -1423,6 +1654,25 @@ function bindTabEvents(){
       await saveEtiquetas(); render(); toast('Etiqueta excluída.');
     });
   }
+  if(activeTab==='registros'){
+    $$('[data-pick-registro-product]').forEach(el=> el.onclick = ()=>{
+      registroNav = {level:2, productKey:el.dataset.pickRegistroProduct, pais:null};
+      render();
+    });
+    $$('[data-pick-registro-pais]').forEach(el=> el.onclick = ()=>{
+      registroNav.pais = el.dataset.pickRegistroPais;
+      registroNav.level = 3;
+      render();
+    });
+    $$('[data-registro-crumb]').forEach(el=> el.onclick = ()=>{
+      const lvl = parseInt(el.dataset.registroCrumb, 10);
+      if(lvl===1) registroNav = {level:1, productKey:null, pais:null};
+      else if(lvl===2){ registroNav.level=2; registroNav.pais=null; }
+      render();
+    });
+    const editarRegistroBtn = $('#btn-editar-registro');
+    if(editarRegistroBtn) editarRegistroBtn.onclick = ()=> openRegistroModal();
+  }
   if(activeTab==='pedidos'){
     const novoBtn = $('#btn-novo-pedido'); if(novoBtn) novoBtn.onclick = openPedidoModal;
     $$('[data-open-pedido]').forEach(el=> el.onclick = ()=>{
@@ -1448,21 +1698,6 @@ function bindTabEvents(){
 }
 
 $$('.tab-btn').forEach(b=> b.onclick = ()=>{ activeTab = b.dataset.tab; render(); });
-
-$('#btn-excluir-tudo').onclick = async ()=>{
-  if(totalRecords()===0){ toast('Não há etiquetas ou pedidos para excluir.'); return; }
-  if(!(await confirmModal('Isso vai excluir TODAS as etiquetas e TODOS os pedidos (a Base de Dados não será afetada). Confirmar?'))) return;
-  etiquetas = [];
-  pedidos = [];
-  suppressedAuto = {};
-  await saveEtiquetas();
-  await savePedidos();
-  await saveSuppressed();
-  pedidosView = {mode:'list', pedidoId:null};
-  etiquetaNav = {level:1, productKey:null, pais:null, distribuidor:null};
-  render();
-  toast('Etiquetas e pedidos excluídos.');
-};
 
 async function boot(){
   await loadAll();

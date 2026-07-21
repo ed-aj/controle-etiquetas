@@ -411,12 +411,13 @@ function calcLote(dateStr){
   const doy = String(dayOfYear(d)).padStart(3,'0');
   return 'L'+year+doy;
 }
-function calcLoteAntesDe(dateStr){
-  if(!dateStr) return '';
-  const d = new Date(dateStr+'T00:00:00');
-  if(isNaN(d.getTime())) return '';
-  d.setDate(d.getDate()-1);
-  return calcLote(d.toISOString().slice(0,10));
+
+// Diferença em dias entre duas datas (AAAA-MM-DD). Positivo se dateBStr for
+// depois de dateAStr.
+function diasEntre(dateAStr, dateBStr){
+  const a = new Date(dateAStr+'T00:00:00');
+  const b = new Date(dateBStr+'T00:00:00');
+  return Math.round((b - a) / 86400000);
 }
 
 function productKeyOf(r){
@@ -526,9 +527,12 @@ function computeFamilyStatus(nodeKey){
   return {list, vigente, next};
 }
 
+// Lote recomendado = sempre a data de hoje (não a data da próxima etiqueta,
+// mesmo que ela esteja programada para breve) — porque o lote aponta pra uma
+// embalagem que JÁ foi produzida, e uma data no futuro apontaria pra uma
+// embalagem que ainda nem existe. Só a etiqueta vigente recebe lote.
 function loteRecomendado(e, status){
   if(!status.vigente || status.vigente.id !== e.id) return null;
-  if(status.next) return calcLoteAntesDe(status.next.dataStartup);
   return calcLote(TODAY);
 }
 
@@ -987,7 +991,7 @@ function renderEtiquetaCard(e, status, isActive){
         <div><b>SKU</b>${escapeHtml(e.sku)}</div>
         <div><b>Origem</b>${e.source==='auto' ? 'Automática (Base de Dados)' : 'Manual'}</div>
       </div>
-      ${(isActive && status.next) ? `<div class="field-hint" style="margin-top:10px;">Próxima etiqueta programada para ${escapeHtml(status.next.dataStartup)} (${escapeHtml(status.next.nomeEtiqueta)}). O lote recomendado acima já considera o corte um dia antes desse startup.</div>` : ''}
+      ${(isActive && status.next) ? `<div class="field-hint" style="margin-top:10px;">Próxima etiqueta programada para ${escapeHtml(status.next.dataStartup)} (${escapeHtml(status.next.nomeEtiqueta)}). O lote recomendado continua baseado na data de hoje até essa virada.</div>` : ''}
       ${e.observacoes ? `<div class="ef-obs">"${escapeHtml(e.observacoes)}"</div>` : ''}
       ${isActive ? `
         <div class="ef-row" style="margin-top:2px; padding-top:12px; border-top:1px solid var(--border);">
@@ -1410,6 +1414,7 @@ function buildPedidoRows(p){
   return skusDoPedido(p).map(sku=>{
     const baseRow = baseData.find(r=>r.sku===sku && r.pais===p.pais && ((r.distribuidor||'')===(p.distribuidor||'')));
     let etiquetaVigente = null;
+    let proximaTroca = null;
     if(baseRow){
       const productKey = productKeyOf(baseRow);
       const nodeKey = nodeKeyOf(productKey, p.pais, p.distribuidor || null);
@@ -1417,14 +1422,25 @@ function buildPedidoRows(p){
       const candidates = status.list.filter(e=> e.dataStartup <= p.data);
       candidates.sort((a,b)=> b.dataStartup.localeCompare(a.dataStartup));
       etiquetaVigente = candidates[0] || null;
-      const next = status.list.find(e=> etiquetaVigente && e.dataStartup > etiquetaVigente.dataStartup) || null;
-      if(etiquetaVigente) etiquetaVigente = {...etiquetaVigente, _next: next};
+      // Aviso: se já existe uma próxima etiqueta programada pra esse produto/
+      // país/distribuidor com início em menos de 10 dias (contando a partir
+      // de hoje), sinaliza — pra não correr o risco do pedido ser produzido/
+      // expedido já depois da virada, ainda com a etiqueta antiga.
+      if(status.next){
+        const dias = diasEntre(TODAY, status.next.dataStartup);
+        if(dias <= 10){
+          proximaTroca = {data: status.next.dataStartup, nome: status.next.nomeEtiqueta, dias};
+        }
+      }
     }
-    const lote = etiquetaVigente ? (etiquetaVigente._next ? calcLoteAntesDe(etiquetaVigente._next.dataStartup) : calcLote(p.data)) : '';
+    // Lote recomendado = sempre a data do pedido — aponta pra embalagem já
+    // produzida até essa data; nunca uma data no futuro (ver loteRecomendado
+    // acima para a mesma regra aplicada na aba Etiquetas).
+    const lote = etiquetaVigente ? calcLote(p.data) : '';
     const nomeProduto = baseRow
       ? [baseRow.marca, baseRow.submarca!=='-'?baseRow.submarca:'', baseRow.versao, baseRow.embalagem, baseRow.peso].filter(Boolean).join(' · ')
       : '';
-    return {sku, baseRow, etiquetaVigente, lote, nomeProduto};
+    return {sku, baseRow, etiquetaVigente, lote, nomeProduto, proximaTroca};
   });
 }
 
@@ -1432,6 +1448,19 @@ function renderPedidoDetail(){
   const p = pedidos.find(x=>x.id===pedidosView.pedidoId);
   if(!p){ pedidosView.mode='list'; return renderPedidosTab(); }
   const rows = buildPedidoRows(p);
+  const avisos = rows.filter(r=>r.proximaTroca);
+  const avisoHtml = avisos.length ? `
+    <div style="background:var(--warn-soft); border:1px solid #f0c4c9; border-radius:var(--radius-lg); padding:14px 18px; margin-bottom:18px;">
+      <div style="font-weight:600; color:#c1202f; margin-bottom:8px;">⚠ Atenção: etiqueta prestes a mudar</div>
+      ${avisos.map(r=>{
+        const dias = r.proximaTroca.dias;
+        const quando = dias < 0
+          ? `já deveria ter mudado (previsto para ${escapeHtml(r.proximaTroca.data)})`
+          : (dias===0 ? `muda hoje (${escapeHtml(r.proximaTroca.data)})` : `muda em ${dias} dia${dias!==1?'s':''} (${escapeHtml(r.proximaTroca.data)})`);
+        return `<div style="font-size:13px; color:#c1202f; margin-top:4px;">SKU ${escapeHtml(r.sku)}${r.nomeProduto ? ' ('+escapeHtml(r.nomeProduto)+')' : ''}: a etiqueta ${quando}. Confirme antes de produzir/expedir este pedido.</div>`;
+      }).join('')}
+    </div>
+  ` : '';
 
   return `
     <div class="panel">
@@ -1449,6 +1478,7 @@ function renderPedidoDetail(){
         <div><b>País</b>${escapeHtml(p.pais)}</div>
         <div><b>Distribuidor</b>${escapeHtml(p.distribuidor||'—')}</div>
       </div>
+      ${avisoHtml}
       <h4 style="font-size:12px; color:var(--ink-faint); margin-bottom:10px;">Itens do pedido</h4>
       <div class="table-wrap">
         <table>
@@ -1465,7 +1495,7 @@ function renderPedidoDetail(){
               <tr>
                 <td class="sku-cell">${escapeHtml(r.sku)}</td>
                 <td>${r.baseRow ? (r.nomeProduto ? escapeHtml(r.nomeProduto) : '—') : 'SKU não encontrado na base'}</td>
-                <td>${r.etiquetaVigente ? escapeHtml(r.etiquetaVigente.nomeEtiqueta) : (r.baseRow ? 'Sem etiqueta vigente' : '—')}</td>
+                <td>${r.etiquetaVigente ? escapeHtml(r.etiquetaVigente.nomeEtiqueta) : (r.baseRow ? 'Sem etiqueta vigente' : '—')}${r.proximaTroca ? ' <span class="tag" style="background:var(--warn-soft); color:#c1202f; border-color:#f0c4c9;">muda em breve</span>' : ''}</td>
                 <td>${r.etiquetaVigente ? `<span class="stamp" style="font-size:13px; padding:4px 11px;"><small>Lote</small>${escapeHtml(r.lote)}</span>` : '—'}</td>
               </tr>
             `).join('')}
